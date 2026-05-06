@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analyses: {
+        Row: {
+          created_at: string
+          error: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          participants: string | null
+          report: Json | null
+          status: string
+          storage_path: string
+          topic: string | null
+          transcript: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          participants?: string | null
+          report?: Json | null
+          status?: string
+          storage_path: string
+          topic?: string | null
+          transcript?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          participants?: string | null
+          report?: Json | null
+          status?: string
+          storage_path?: string
+          topic?: string | null
+          transcript?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
