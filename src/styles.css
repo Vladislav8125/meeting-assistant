@@ -61,10 +61,21 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@theme inline {
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-accent-2: var(--accent-2);
+  --shadow-glow: 0 0 0 1px color-mix(in oklab, var(--brand) 40%, transparent), 0 20px 60px -20px color-mix(in oklab, var(--brand) 50%, transparent);
+}
+
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.75rem;
+  /* Light fallback (app is dark-first) */
+  --background: oklch(0.985 0.005 250);
+  --foreground: oklch(0.16 0.03 260);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
