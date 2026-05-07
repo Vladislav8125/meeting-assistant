@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeRecording } from "@/lib/analyze.functions";
 import { Upload, Loader2, FileAudio, FileVideo } from "lucide-react";
@@ -9,12 +9,12 @@ const ACCEPTED = ["audio/", "video/"];
 const MAX_BYTES = 200 * 1024 * 1024; // 200 MB practical limit for base64 path
 
 export function Uploader() {
-  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [topic, setTopic] = useState("");
   const [participants, setParticipants] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
+  const [lastId, setLastId] = useState<string | null>(null);
 
   const onPick = useCallback((f: File | null) => {
     if (!f) return;
@@ -58,25 +58,30 @@ export function Uploader() {
         .single();
       if (insErr || !row) throw insErr ?? new Error("insert failed");
 
-      // navigate immediately so user sees progress
-      void navigate({ to: "/analysis/$id", params: { id: row.id } });
-
-      // fire-and-forget analysis
-      analyzeRecording({
-        data: {
-          analysisId: row.id,
-          publicUrl: pub.publicUrl,
-          mimeType: file.type,
-          topic: topic || undefined,
-          participants: participants || undefined,
-        },
-      }).catch((e) => {
+      setProgress("Анализирую через Lovable AI… (1–3 мин)");
+      try {
+        await analyzeRecording({
+          data: {
+            analysisId: row.id,
+            publicUrl: pub.publicUrl,
+            mimeType: file.type,
+            topic: topic || undefined,
+            participants: participants || undefined,
+          },
+        });
+        toast.success("Анализ готов");
+      } catch (e) {
         console.error(e);
-        toast.error("Анализ не запустился: " + (e?.message ?? "ошибка"));
-      });
+        const msg = e instanceof Error ? e.message : "ошибка";
+        toast.error("Анализ не выполнен: " + msg);
+      }
+
+      // Не редиректим — показываем ссылку на отчёт прямо здесь
+      setLastId(row.id);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
       toast.error(msg);
+    } finally {
       setBusy(false);
       setProgress("");
     }
@@ -152,6 +157,15 @@ export function Uploader() {
           <>Анализировать запись</>
         )}
       </button>
+      {lastId && !busy && (
+        <Link
+          to="/analysis/$id"
+          params={{ id: lastId }}
+          className="mt-4 block text-center rounded-lg border border-brand/40 bg-brand/10 text-brand px-4 py-2.5 text-sm font-mono hover:bg-brand/20 transition"
+        >
+          Открыть отчёт →
+        </Link>
+      )}
       <p className="text-[11px] text-muted-foreground mt-3 text-center">
         Транскрибация и анализ выполняются на сервере через Lovable AI. Файл
         будет доступен только по ссылке отчёта.
