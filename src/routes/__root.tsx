@@ -83,6 +83,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Lovable App" },
       { name: "twitter:description", content: "Insight Stream analyzes audio/video for business insights, transcribing and interpreting content via LLM." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9ac94860-9c97-402d-97f8-d72483f13cbf/id-preview-299770de--e71eef0d-2665-4ba3-ac78-e7a2c5599aac.lovable.app-1778191626759.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9ac94860-9c97-402d-97f8-d72483f13cbf/id-preview-299770de--e71eef0d-2665-4ba3-ac78-e7a2c5599aac.lovable.app-1778191626759.png" },
     ],
     links: [
       {
