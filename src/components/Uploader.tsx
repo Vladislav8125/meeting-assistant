@@ -76,8 +76,8 @@ export function Uploader() {
         toast.error("Анализ не выполнен: " + msg);
       }
 
-      // Перейти к отчёту только после завершения анализа
-      void navigate({ to: "/analysis/$id", params: { id: row.id } });
+      // Не редиректим — показываем ссылку на отчёт прямо здесь
+      setLastId(row.id);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
       toast.error(msg);
