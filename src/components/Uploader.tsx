@@ -58,25 +58,30 @@ export function Uploader() {
         .single();
       if (insErr || !row) throw insErr ?? new Error("insert failed");
 
-      // navigate immediately so user sees progress
-      void navigate({ to: "/analysis/$id", params: { id: row.id } });
-
-      // fire-and-forget analysis
-      analyzeRecording({
-        data: {
-          analysisId: row.id,
-          publicUrl: pub.publicUrl,
-          mimeType: file.type,
-          topic: topic || undefined,
-          participants: participants || undefined,
-        },
-      }).catch((e) => {
+      setProgress("Анализирую через Lovable AI… (1–3 мин)");
+      try {
+        await analyzeRecording({
+          data: {
+            analysisId: row.id,
+            publicUrl: pub.publicUrl,
+            mimeType: file.type,
+            topic: topic || undefined,
+            participants: participants || undefined,
+          },
+        });
+        toast.success("Анализ готов");
+      } catch (e) {
         console.error(e);
-        toast.error("Анализ не запустился: " + (e?.message ?? "ошибка"));
-      });
+        const msg = e instanceof Error ? e.message : "ошибка";
+        toast.error("Анализ не выполнен: " + msg);
+      }
+
+      // Перейти к отчёту только после завершения анализа
+      void navigate({ to: "/analysis/$id", params: { id: row.id } });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
       toast.error(msg);
+    } finally {
       setBusy(false);
       setProgress("");
     }
