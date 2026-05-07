@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeRecording } from "@/lib/analyze.functions";
 import { Upload, Loader2, FileAudio, FileVideo } from "lucide-react";
