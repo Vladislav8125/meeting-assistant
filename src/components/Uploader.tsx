@@ -9,12 +9,12 @@ const ACCEPTED = ["audio/", "video/"];
 const MAX_BYTES = 200 * 1024 * 1024; // 200 MB practical limit for base64 path
 
 export function Uploader() {
-  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [topic, setTopic] = useState("");
   const [participants, setParticipants] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
+  const [lastId, setLastId] = useState<string | null>(null);
 
   const onPick = useCallback((f: File | null) => {
     if (!f) return;
