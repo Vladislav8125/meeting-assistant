@@ -140,7 +140,7 @@ function AnalysisPage() {
           <ScoreBadge score={r?.overall_score} status={data.status} />
         </header>
 
-        {data.status === "processing" || data.status === "pending" ? (
+        {data.status !== "done" && data.status !== "failed" ? (
           <ProcessingState status={data.status} />
         ) : data.status === "failed" ? (
           <div className="mt-8 rounded-xl border border-destructive/40 bg-destructive/10 p-5 flex gap-3">
@@ -161,14 +161,22 @@ function AnalysisPage() {
 }
 
 function ProcessingState({ status }: { status: string }) {
+  const label =
+    status === "pending"
+      ? "В очереди…"
+      : status === "transcribing"
+        ? "Транскрибируем запись…"
+        : status === "analyzing"
+          ? "Анализируем фрагменты…"
+          : status === "synthesizing"
+            ? "Собираем итоговый отчёт…"
+            : "Обрабатываем…";
   return (
     <div className="mt-10 rounded-2xl border border-border bg-card/60 p-8 text-center">
       <Loader2 className="h-7 w-7 animate-spin mx-auto text-brand" />
-      <div className="mt-3 font-display text-xl">
-        {status === "pending" ? "В очереди…" : "Анализируем запись…"}
-      </div>
+      <div className="mt-3 font-display text-xl">{label}</div>
       <div className="text-sm text-muted-foreground mt-1">
-        Обычно занимает 1–3 минуты. Страница обновится автоматически.
+        Длинные записи разбиваются на фрагменты и обрабатываются параллельно.
       </div>
     </div>
   );
