@@ -140,7 +140,7 @@ function AnalysisPage() {
           <ScoreBadge score={r?.overall_score} status={data.status} />
         </header>
 
-        {data.status === "processing" || data.status === "pending" ? (
+        {data.status !== "done" && data.status !== "failed" ? (
           <ProcessingState status={data.status} />
         ) : data.status === "failed" ? (
           <div className="mt-8 rounded-xl border border-destructive/40 bg-destructive/10 p-5 flex gap-3">
