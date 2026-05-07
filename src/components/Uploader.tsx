@@ -157,6 +157,15 @@ export function Uploader() {
           <>Анализировать запись</>
         )}
       </button>
+      {lastId && !busy && (
+        <Link
+          to="/analysis/$id"
+          params={{ id: lastId }}
+          className="mt-4 block text-center rounded-lg border border-brand/40 bg-brand/10 text-brand px-4 py-2.5 text-sm font-mono hover:bg-brand/20 transition"
+        >
+          Открыть отчёт →
+        </Link>
+      )}
       <p className="text-[11px] text-muted-foreground mt-3 text-center">
         Транскрибация и анализ выполняются на сервере через Lovable AI. Файл
         будет доступен только по ссылке отчёта.
