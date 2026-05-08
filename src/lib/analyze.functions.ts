@@ -199,7 +199,7 @@ export const analyzeRecording = createServerFn({ method: "POST" })
             },
             {
               type: "image_url",
-              image_url: { url: `data:${data.mimeType};base64,${base64}` },
+              image_url: { url: data.publicUrl },
             },
           ],
         },
