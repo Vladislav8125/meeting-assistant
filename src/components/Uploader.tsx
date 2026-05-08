@@ -58,7 +58,7 @@ export function Uploader() {
         .single();
       if (insErr || !row) throw insErr ?? new Error("insert failed");
 
-      setProgress("Анализирую через Lovable AI… (1–3 мин)");
+      setProgress("Отправляю в Fireflies на транскрибацию…");
       try {
         await analyzeRecording({
           data: {
@@ -69,11 +69,13 @@ export function Uploader() {
             participants: participants || undefined,
           },
         });
-        toast.success("Анализ готов");
+        toast.success(
+          "Запись отправлена. Транскрибация занимает 5–15 минут — следите в отчёте.",
+        );
       } catch (e) {
         console.error(e);
         const msg = e instanceof Error ? e.message : "ошибка";
-        toast.error("Анализ не выполнен: " + msg);
+        toast.error("Не удалось запустить анализ: " + msg);
       }
 
       // Не редиректим — показываем ссылку на отчёт прямо здесь
