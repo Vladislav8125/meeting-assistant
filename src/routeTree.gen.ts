@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalysisIdRouteImport } from './routes/analysis.$id'
+import { Route as ApiPublicFirefliesWebhookRouteImport } from './routes/api/public/fireflies-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,41 @@ const AnalysisIdRoute = AnalysisIdRouteImport.update({
   path: '/analysis/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicFirefliesWebhookRoute =
+  ApiPublicFirefliesWebhookRouteImport.update({
+    id: '/api/public/fireflies-webhook',
+    path: '/api/public/fireflies-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analysis/$id': typeof AnalysisIdRoute
+  '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analysis/$id': typeof AnalysisIdRoute
+  '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/analysis/$id': typeof AnalysisIdRoute
+  '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/analysis/$id'
+  fullPaths: '/' | '/analysis/$id' | '/api/public/fireflies-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analysis/$id'
-  id: '__root__' | '/' | '/analysis/$id'
+  to: '/' | '/analysis/$id' | '/api/public/fireflies-webhook'
+  id: '__root__' | '/' | '/analysis/$id' | '/api/public/fireflies-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalysisIdRoute: typeof AnalysisIdRoute
+  ApiPublicFirefliesWebhookRoute: typeof ApiPublicFirefliesWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,13 +76,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalysisIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/fireflies-webhook': {
+      id: '/api/public/fireflies-webhook'
+      path: '/api/public/fireflies-webhook'
+      fullPath: '/api/public/fireflies-webhook'
+      preLoaderRoute: typeof ApiPublicFirefliesWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalysisIdRoute: AnalysisIdRoute,
+  ApiPublicFirefliesWebhookRoute: ApiPublicFirefliesWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
