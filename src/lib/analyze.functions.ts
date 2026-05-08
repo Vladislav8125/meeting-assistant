@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const TRANSCRIBE_MODEL = "google/gemini-2.5-flash";
 const ANALYZE_MODEL = "google/gemini-2.5-flash";
+const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
 
 // ---------- Prompts ----------
 
