@@ -178,13 +178,7 @@ export const analyzeRecording = createServerFn({ method: "POST" })
     await setStatus("transcribing");
 
     try {
-      // ---- Stage 1: download + transcribe ----
-      const fileResp = await fetch(data.publicUrl);
-      if (!fileResp.ok)
-        throw new Error(`Не удалось скачать файл: ${fileResp.status}`);
-      const buf = new Uint8Array(await fileResp.arrayBuffer());
-      const base64 = Buffer.from(buf).toString("base64");
-
+      // ---- Stage 1: transcribe by URL (avoid OOM on large files) ----
       const userMeta = [
         data.topic ? `Тема встречи: ${data.topic}` : null,
         data.participants ? `Участники: ${data.participants}` : null,
@@ -205,7 +199,7 @@ export const analyzeRecording = createServerFn({ method: "POST" })
             },
             {
               type: "image_url",
-              image_url: { url: `data:${data.mimeType};base64,${base64}` },
+              image_url: { url: data.publicUrl },
             },
           ],
         },
