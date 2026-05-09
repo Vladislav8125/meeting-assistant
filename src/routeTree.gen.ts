@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalysisIdRouteImport } from './routes/analysis.$id'
+import { Route as ApiPublicPollFirefliesRouteImport } from './routes/api/public/poll-fireflies'
 import { Route as ApiPublicFirefliesWebhookRouteImport } from './routes/api/public/fireflies-webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -21,6 +22,11 @@ const IndexRoute = IndexRouteImport.update({
 const AnalysisIdRoute = AnalysisIdRouteImport.update({
   id: '/analysis/$id',
   path: '/analysis/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPollFirefliesRoute = ApiPublicPollFirefliesRouteImport.update({
+  id: '/api/public/poll-fireflies',
+  path: '/api/public/poll-fireflies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicFirefliesWebhookRoute =
@@ -34,30 +40,47 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analysis/$id': typeof AnalysisIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
+  '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analysis/$id': typeof AnalysisIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
+  '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/analysis/$id': typeof AnalysisIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
+  '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/analysis/$id' | '/api/public/fireflies-webhook'
+  fullPaths:
+    | '/'
+    | '/analysis/$id'
+    | '/api/public/fireflies-webhook'
+    | '/api/public/poll-fireflies'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analysis/$id' | '/api/public/fireflies-webhook'
-  id: '__root__' | '/' | '/analysis/$id' | '/api/public/fireflies-webhook'
+  to:
+    | '/'
+    | '/analysis/$id'
+    | '/api/public/fireflies-webhook'
+    | '/api/public/poll-fireflies'
+  id:
+    | '__root__'
+    | '/'
+    | '/analysis/$id'
+    | '/api/public/fireflies-webhook'
+    | '/api/public/poll-fireflies'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalysisIdRoute: typeof AnalysisIdRoute
   ApiPublicFirefliesWebhookRoute: typeof ApiPublicFirefliesWebhookRoute
+  ApiPublicPollFirefliesRoute: typeof ApiPublicPollFirefliesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -76,6 +99,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalysisIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/poll-fireflies': {
+      id: '/api/public/poll-fireflies'
+      path: '/api/public/poll-fireflies'
+      fullPath: '/api/public/poll-fireflies'
+      preLoaderRoute: typeof ApiPublicPollFirefliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/fireflies-webhook': {
       id: '/api/public/fireflies-webhook'
       path: '/api/public/fireflies-webhook'
@@ -90,6 +120,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalysisIdRoute: AnalysisIdRoute,
   ApiPublicFirefliesWebhookRoute: ApiPublicFirefliesWebhookRoute,
+  ApiPublicPollFirefliesRoute: ApiPublicPollFirefliesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
