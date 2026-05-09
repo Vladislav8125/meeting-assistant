@@ -40,17 +40,28 @@ function Index() {
   const [recent, setRecent] = useState<Recent[]>([]);
   const router = useRouter();
 
+  const kickPollFn = useServerFn(kickPoll);
+
   useEffect(() => {
     let active = true;
     const load = () => {
       supabase
         .from("analyses")
-        .select("id,file_name,status,created_at,topic")
+        .select("id,file_name,status,created_at,updated_at,topic")
         .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
         .order("created_at", { ascending: false })
         .limit(9)
         .then(({ data }) => {
-          if (active && data) setRecent(data as Recent[]);
+          if (!active || !data) return;
+          const rows = data as Recent[];
+          setRecent(rows);
+          // Auto-kick the polling cron if any record sits in transcribing > 3 min
+          const stuck = rows.some((r) => {
+            if (r.status !== "transcribing") return false;
+            const ts = r.updated_at ?? r.created_at;
+            return (Date.now() - new Date(ts).getTime()) / 60000 > 3;
+          });
+          if (stuck) kickPollFn().catch(() => {});
         });
     };
     load();
@@ -59,7 +70,7 @@ function Index() {
       active = false;
       clearInterval(t);
     };
-  }, [router.state.location.pathname]);
+  }, [router.state.location.pathname, kickPollFn]);
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
