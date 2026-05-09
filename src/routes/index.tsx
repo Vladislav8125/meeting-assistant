@@ -198,6 +198,85 @@ function Feature({
   );
 }
 
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function minutesSince(iso: string) {
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+}
+
+function RecentCard({ r }: { r: Recent }) {
+  const retryFn = useServerFn(retryAnalysis);
+  const [busy, setBusy] = useState(false);
+  const [, force] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => force((x) => x + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const updatedAt = r.updated_at ?? r.created_at;
+  const inStatus = minutesSince(updatedAt);
+  const isFinal = r.status === "done" || r.status === "failed";
+  const isStuck = !isFinal && inStatus >= 10;
+
+  const onRetry = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await retryFn({ data: { analysisId: r.id } });
+      if (res?.ok) toast.success("Обработка перезапущена");
+      else toast.error(res?.error || "Не удалось перезапустить");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-background/60 hover:bg-background transition p-4">
+      <Link to="/analysis/$id" params={{ id: r.id }} className="block">
+        <div className="flex items-center justify-between mb-2">
+          <StatusPill status={r.status} />
+          <span className="text-[11px] font-mono text-muted-foreground">
+            {fmtTime(r.created_at)}
+          </span>
+        </div>
+        <div className="font-mono text-sm truncate">{r.file_name}</div>
+        {r.topic && (
+          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {r.topic}
+          </div>
+        )}
+        <ProgressBar status={r.status} />
+        <div className="mt-2 flex items-center justify-between text-[11px] font-mono">
+          <span className="text-muted-foreground">
+            обновлено {fmtTime(updatedAt)}
+          </span>
+          <span className={isStuck ? "text-destructive" : "text-muted-foreground"}>
+            в статусе {inStatus} мин{isStuck ? " · возможно застряло" : ""}
+          </span>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={busy}
+        className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/40 disabled:opacity-50 px-2 py-1.5 text-xs font-mono transition"
+      >
+        <RefreshCw className={`h-3 w-3 ${busy ? "animate-spin" : ""}`} />
+        {busy ? "Запускаю…" : "Повторить обработку"}
+      </button>
+    </div>
+  );
+}
+
 const STATUS_MAP: Record<
   string,
   { label: string; cls: string; progress: number; bar: string }
