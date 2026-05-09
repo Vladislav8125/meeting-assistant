@@ -76,7 +76,7 @@ function Index() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/40 px-3 py-1 text-xs font-mono text-muted-foreground">
               <Sparkles className="h-3 w-3 text-accent-2" />
-              MVP · Lovable AI · Gemini 2.5
+              meetanalize · эффективное совещание
             </div>
             <h1 className="mt-6 font-display text-5xl sm:text-6xl font-semibold leading-[0.95]">
               Совещания, которые <span className="text-gradient">приносят результат</span>
