@@ -149,34 +149,7 @@ function Index() {
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {recent.map((r) => (
-                    <Link
-                      key={r.id}
-                      to="/analysis/$id"
-                      params={{ id: r.id }}
-                      className="group rounded-xl border border-border bg-background/60 hover:bg-background transition p-4"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <StatusPill status={r.status} />
-                        <span className="text-[11px] font-mono text-muted-foreground">
-                          {new Date(r.created_at).toLocaleTimeString("ru-RU", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      <div className="font-mono text-sm truncate">
-                        {r.file_name}
-                      </div>
-                      {r.topic && (
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {r.topic}
-                        </div>
-                      )}
-                      <ProgressBar status={r.status} />
-                      <div className="mt-3 inline-flex items-center gap-1 text-xs text-brand opacity-0 group-hover:opacity-100 transition">
-                        Открыть отчёт <ArrowRight className="h-3 w-3" />
-                      </div>
-                    </Link>
+                    <RecentCard key={r.id} r={r} />
                   ))}
                 </div>
               </div>
