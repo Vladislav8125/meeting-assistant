@@ -210,17 +210,73 @@ function Feature({
   );
 }
 
+const STATUS_MAP: Record<
+  string,
+  { label: string; cls: string; progress: number; bar: string }
+> = {
+  pending: {
+    label: "Ожидает",
+    cls: "bg-muted text-muted-foreground",
+    progress: 5,
+    bar: "bg-muted-foreground/40",
+  },
+  processing: {
+    label: "Обработка…",
+    cls: "bg-brand/20 text-brand",
+    progress: 25,
+    bar: "bg-brand",
+  },
+  transcribing: {
+    label: "Транскрипция…",
+    cls: "bg-brand/20 text-brand",
+    progress: 40,
+    bar: "bg-brand",
+  },
+  analyzing: {
+    label: "Анализ чанков…",
+    cls: "bg-accent-2/20 text-accent-2",
+    progress: 70,
+    bar: "bg-accent-2",
+  },
+  synthesizing: {
+    label: "Синтез отчёта…",
+    cls: "bg-accent-2/20 text-accent-2",
+    progress: 90,
+    bar: "bg-accent-2",
+  },
+  done: {
+    label: "Готово",
+    cls: "bg-success/20 text-success",
+    progress: 100,
+    bar: "bg-success",
+  },
+  failed: {
+    label: "Ошибка",
+    cls: "bg-destructive/20 text-destructive",
+    progress: 100,
+    bar: "bg-destructive",
+  },
+};
+
 function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    pending: { label: "Ожидает", cls: "bg-muted text-muted-foreground" },
-    processing: { label: "Анализ…", cls: "bg-brand/20 text-brand" },
-    done: { label: "Готово", cls: "bg-success/20 text-success" },
-    failed: { label: "Ошибка", cls: "bg-destructive/20 text-destructive" },
-  };
-  const s = map[status] ?? map.pending;
+  const s = STATUS_MAP[status] ?? STATUS_MAP.pending;
   return (
     <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${s.cls}`}>
       {s.label}
     </span>
+  );
+}
+
+function ProgressBar({ status }: { status: string }) {
+  const s = STATUS_MAP[status] ?? STATUS_MAP.pending;
+  const animated =
+    status !== "done" && status !== "failed" ? "animate-pulse" : "";
+  return (
+    <div className="mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div
+        className={`h-full ${s.bar} ${animated} transition-all duration-500`}
+        style={{ width: `${s.progress}%` }}
+      />
+    </div>
   );
 }
