@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Uploader } from "@/components/Uploader";
 import { supabase } from "@/integrations/supabase/client";
+import { retryAnalysis, kickPoll } from "@/lib/analyze.functions";
 import { useEffect, useState } from "react";
-import { Sparkles, Mic, BarChart3, ShieldCheck, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { Sparkles, Mic, BarChart3, ShieldCheck, ArrowRight, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -29,6 +32,7 @@ type Recent = {
   file_name: string;
   status: string;
   created_at: string;
+  updated_at: string | null;
   topic: string | null;
 };
 
