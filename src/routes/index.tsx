@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Uploader } from "@/components/Uploader";
 import { supabase } from "@/integrations/supabase/client";
+import { retryAnalysis, kickPoll } from "@/lib/analyze.functions";
 import { useEffect, useState } from "react";
-import { Sparkles, Mic, BarChart3, ShieldCheck, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { Sparkles, Mic, BarChart3, ShieldCheck, ArrowRight, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -29,6 +32,7 @@ type Recent = {
   file_name: string;
   status: string;
   created_at: string;
+  updated_at: string | null;
   topic: string | null;
 };
 
@@ -36,17 +40,28 @@ function Index() {
   const [recent, setRecent] = useState<Recent[]>([]);
   const router = useRouter();
 
+  const kickPollFn = useServerFn(kickPoll);
+
   useEffect(() => {
     let active = true;
     const load = () => {
       supabase
         .from("analyses")
-        .select("id,file_name,status,created_at,topic")
+        .select("id,file_name,status,created_at,updated_at,topic")
         .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
         .order("created_at", { ascending: false })
         .limit(9)
         .then(({ data }) => {
-          if (active && data) setRecent(data as Recent[]);
+          if (!active || !data) return;
+          const rows = data as Recent[];
+          setRecent(rows);
+          // Auto-kick the polling cron if any record sits in transcribing > 3 min
+          const stuck = rows.some((r) => {
+            if (r.status !== "transcribing") return false;
+            const ts = r.updated_at ?? r.created_at;
+            return (Date.now() - new Date(ts).getTime()) / 60000 > 3;
+          });
+          if (stuck) kickPollFn().catch(() => {});
         });
     };
     load();
@@ -55,7 +70,7 @@ function Index() {
       active = false;
       clearInterval(t);
     };
-  }, [router.state.location.pathname]);
+  }, [router.state.location.pathname, kickPollFn]);
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -134,34 +149,7 @@ function Index() {
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {recent.map((r) => (
-                    <Link
-                      key={r.id}
-                      to="/analysis/$id"
-                      params={{ id: r.id }}
-                      className="group rounded-xl border border-border bg-background/60 hover:bg-background transition p-4"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <StatusPill status={r.status} />
-                        <span className="text-[11px] font-mono text-muted-foreground">
-                          {new Date(r.created_at).toLocaleTimeString("ru-RU", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      <div className="font-mono text-sm truncate">
-                        {r.file_name}
-                      </div>
-                      {r.topic && (
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {r.topic}
-                        </div>
-                      )}
-                      <ProgressBar status={r.status} />
-                      <div className="mt-3 inline-flex items-center gap-1 text-xs text-brand opacity-0 group-hover:opacity-100 transition">
-                        Открыть отчёт <ArrowRight className="h-3 w-3" />
-                      </div>
-                    </Link>
+                    <RecentCard key={r.id} r={r} />
                   ))}
                 </div>
               </div>
@@ -206,6 +194,85 @@ function Feature({
       </div>
       <div className="mt-3 font-display text-lg">{title}</div>
       <div className="text-sm text-muted-foreground mt-1">{text}</div>
+    </div>
+  );
+}
+
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function minutesSince(iso: string) {
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+}
+
+function RecentCard({ r }: { r: Recent }) {
+  const retryFn = useServerFn(retryAnalysis);
+  const [busy, setBusy] = useState(false);
+  const [, force] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => force((x) => x + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const updatedAt = r.updated_at ?? r.created_at;
+  const inStatus = minutesSince(updatedAt);
+  const isFinal = r.status === "done" || r.status === "failed";
+  const isStuck = !isFinal && inStatus >= 10;
+
+  const onRetry = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await retryFn({ data: { analysisId: r.id } });
+      if (res?.ok) toast.success("Обработка перезапущена");
+      else toast.error(res?.error || "Не удалось перезапустить");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-background/60 hover:bg-background transition p-4">
+      <Link to="/analysis/$id" params={{ id: r.id }} className="block">
+        <div className="flex items-center justify-between mb-2">
+          <StatusPill status={r.status} />
+          <span className="text-[11px] font-mono text-muted-foreground">
+            {fmtTime(r.created_at)}
+          </span>
+        </div>
+        <div className="font-mono text-sm truncate">{r.file_name}</div>
+        {r.topic && (
+          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {r.topic}
+          </div>
+        )}
+        <ProgressBar status={r.status} />
+        <div className="mt-2 flex items-center justify-between text-[11px] font-mono">
+          <span className="text-muted-foreground">
+            обновлено {fmtTime(updatedAt)}
+          </span>
+          <span className={isStuck ? "text-destructive" : "text-muted-foreground"}>
+            в статусе {inStatus} мин{isStuck ? " · возможно застряло" : ""}
+          </span>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={busy}
+        className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/40 disabled:opacity-50 px-2 py-1.5 text-xs font-mono transition"
+      >
+        <RefreshCw className={`h-3 w-3 ${busy ? "animate-spin" : ""}`} />
+        {busy ? "Запускаю…" : "Повторить обработку"}
+      </button>
     </div>
   );
 }

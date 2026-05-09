@@ -28,6 +28,7 @@ export type Database = {
           storage_path: string
           topic: string | null
           transcript: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -42,6 +43,7 @@ export type Database = {
           storage_path: string
           topic?: string | null
           transcript?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -56,6 +58,7 @@ export type Database = {
           storage_path?: string
           topic?: string | null
           transcript?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
