@@ -3,6 +3,17 @@ import { z } from "zod";
 
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
 
+async function getAdmin() {
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
+    throw new Error("Supabase env not configured");
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
 // Build webhook URL using the project's stable URL.
 // VITE_SUPABASE_PROJECT_ID is unrelated; the Lovable project ID is hardcoded in
 // stable URL form: project--{lovable-project-id}.lovable.app
