@@ -38,16 +38,22 @@ function Index() {
 
   useEffect(() => {
     let active = true;
-    supabase
-      .from("analyses")
-      .select("id,file_name,status,created_at,topic")
-      .order("created_at", { ascending: false })
-      .limit(6)
-      .then(({ data }) => {
-        if (active && data) setRecent(data as Recent[]);
-      });
+    const load = () => {
+      supabase
+        .from("analyses")
+        .select("id,file_name,status,created_at,topic")
+        .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(9)
+        .then(({ data }) => {
+          if (active && data) setRecent(data as Recent[]);
+        });
+    };
+    load();
+    const t = setInterval(load, 5000);
     return () => {
       active = false;
+      clearInterval(t);
     };
   }, [router.state.location.pathname]);
 
@@ -76,7 +82,7 @@ function Index() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/40 px-3 py-1 text-xs font-mono text-muted-foreground">
               <Sparkles className="h-3 w-3 text-accent-2" />
-              MVP · Lovable AI · Gemini 2.5
+              meetanalize · эффективное совещание
             </div>
             <h1 className="mt-6 font-display text-5xl sm:text-6xl font-semibold leading-[0.95]">
               Совещания, которые <span className="text-gradient">приносят результат</span>
@@ -89,7 +95,7 @@ function Index() {
             <div className="mt-8 flex flex-wrap gap-6 text-sm">
               <Stat label="Правил оценки" value="16" />
               <Stat label="Языки" value="RU · EN" />
-              <Stat label="Время анализа" value="~1–3 мин" />
+              <Stat label="Время анализа" value="5–15 мин" />
             </div>
           </div>
 
@@ -97,38 +103,6 @@ function Index() {
             <Uploader />
           </div>
         </section>
-
-        {recent.length > 0 && (
-          <section className="mt-20">
-            <h2 className="font-display text-2xl mb-4">Последние анализы</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recent.map((r) => (
-                <Link
-                  key={r.id}
-                  to="/analysis/$id"
-                  params={{ id: r.id }}
-                  className="group rounded-xl border border-border bg-card/50 hover:bg-card transition p-4"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <StatusPill status={r.status} />
-                    <span className="text-[11px] font-mono text-muted-foreground">
-                      {new Date(r.created_at).toLocaleString("ru-RU")}
-                    </span>
-                  </div>
-                  <div className="font-mono text-sm truncate">{r.file_name}</div>
-                  {r.topic && (
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {r.topic}
-                    </div>
-                  )}
-                  <div className="mt-3 inline-flex items-center gap-1 text-xs text-brand opacity-0 group-hover:opacity-100 transition">
-                    Открыть отчёт <ArrowRight className="h-3 w-3" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
         <section id="how" className="mt-24 grid md:grid-cols-3 gap-4">
           <Feature
@@ -147,6 +121,53 @@ function Index() {
             text="Файлы хранятся в вашей Cloud-инфраструктуре. Анализ выполняется на сервере."
           />
         </section>
+
+        {recent.length > 0 && (
+          <section className="mt-24">
+            <div className="relative rounded-2xl p-[1px] bg-gradient-to-br from-brand/60 via-accent-2/40 to-transparent shadow-glow">
+              <div className="rounded-2xl bg-card/80 backdrop-blur-sm p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-display text-2xl">Очередь обработки</h2>
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    обновляется автоматически
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {recent.map((r) => (
+                    <Link
+                      key={r.id}
+                      to="/analysis/$id"
+                      params={{ id: r.id }}
+                      className="group rounded-xl border border-border bg-background/60 hover:bg-background transition p-4"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <StatusPill status={r.status} />
+                        <span className="text-[11px] font-mono text-muted-foreground">
+                          {new Date(r.created_at).toLocaleTimeString("ru-RU", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <div className="font-mono text-sm truncate">
+                        {r.file_name}
+                      </div>
+                      {r.topic && (
+                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {r.topic}
+                        </div>
+                      )}
+                      <ProgressBar status={r.status} />
+                      <div className="mt-3 inline-flex items-center gap-1 text-xs text-brand opacity-0 group-hover:opacity-100 transition">
+                        Открыть отчёт <ArrowRight className="h-3 w-3" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="relative z-10 border-t border-border">
@@ -189,17 +210,73 @@ function Feature({
   );
 }
 
+const STATUS_MAP: Record<
+  string,
+  { label: string; cls: string; progress: number; bar: string }
+> = {
+  pending: {
+    label: "Ожидает",
+    cls: "bg-muted text-muted-foreground",
+    progress: 5,
+    bar: "bg-muted-foreground/40",
+  },
+  processing: {
+    label: "Обработка…",
+    cls: "bg-brand/20 text-brand",
+    progress: 25,
+    bar: "bg-brand",
+  },
+  transcribing: {
+    label: "Транскрипция…",
+    cls: "bg-brand/20 text-brand",
+    progress: 40,
+    bar: "bg-brand",
+  },
+  analyzing: {
+    label: "Анализ чанков…",
+    cls: "bg-accent-2/20 text-accent-2",
+    progress: 70,
+    bar: "bg-accent-2",
+  },
+  synthesizing: {
+    label: "Синтез отчёта…",
+    cls: "bg-accent-2/20 text-accent-2",
+    progress: 90,
+    bar: "bg-accent-2",
+  },
+  done: {
+    label: "Готово",
+    cls: "bg-success/20 text-success",
+    progress: 100,
+    bar: "bg-success",
+  },
+  failed: {
+    label: "Ошибка",
+    cls: "bg-destructive/20 text-destructive",
+    progress: 100,
+    bar: "bg-destructive",
+  },
+};
+
 function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    pending: { label: "Ожидает", cls: "bg-muted text-muted-foreground" },
-    processing: { label: "Анализ…", cls: "bg-brand/20 text-brand" },
-    done: { label: "Готово", cls: "bg-success/20 text-success" },
-    failed: { label: "Ошибка", cls: "bg-destructive/20 text-destructive" },
-  };
-  const s = map[status] ?? map.pending;
+  const s = STATUS_MAP[status] ?? STATUS_MAP.pending;
   return (
     <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${s.cls}`}>
       {s.label}
     </span>
+  );
+}
+
+function ProgressBar({ status }: { status: string }) {
+  const s = STATUS_MAP[status] ?? STATUS_MAP.pending;
+  const animated =
+    status !== "done" && status !== "failed" ? "animate-pulse" : "";
+  return (
+    <div className="mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div
+        className={`h-full ${s.bar} ${animated} transition-all duration-500`}
+        style={{ width: `${s.progress}%` }}
+      />
+    </div>
   );
 }
