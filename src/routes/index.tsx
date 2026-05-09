@@ -38,16 +38,22 @@ function Index() {
 
   useEffect(() => {
     let active = true;
-    supabase
-      .from("analyses")
-      .select("id,file_name,status,created_at,topic")
-      .order("created_at", { ascending: false })
-      .limit(6)
-      .then(({ data }) => {
-        if (active && data) setRecent(data as Recent[]);
-      });
+    const load = () => {
+      supabase
+        .from("analyses")
+        .select("id,file_name,status,created_at,topic")
+        .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(9)
+        .then(({ data }) => {
+          if (active && data) setRecent(data as Recent[]);
+        });
+    };
+    load();
+    const t = setInterval(load, 5000);
     return () => {
       active = false;
+      clearInterval(t);
     };
   }, [router.state.location.pathname]);
 
