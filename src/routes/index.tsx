@@ -89,7 +89,7 @@ function Index() {
             <div className="mt-8 flex flex-wrap gap-6 text-sm">
               <Stat label="Правил оценки" value="16" />
               <Stat label="Языки" value="RU · EN" />
-              <Stat label="Время анализа" value="~1–3 мин" />
+              <Stat label="Время анализа" value="5–15 мин" />
             </div>
           </div>
 
