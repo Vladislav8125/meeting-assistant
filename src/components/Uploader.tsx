@@ -53,6 +53,7 @@ export function Uploader() {
           storage_path: path,
           topic: topic || null,
           participants: participants || null,
+          recipient_email: email || null,
           status: "pending",
         })
         .select()
@@ -68,10 +69,13 @@ export function Uploader() {
             mimeType: file.type,
             topic: topic || undefined,
             participants: participants || undefined,
+            recipientEmail: email || undefined,
           },
         });
         toast.success(
-          "Запись отправлена. Транскрибация занимает 5–15 минут — следите в отчёте.",
+          email
+            ? "Запись отправлена. Отчёт придёт на почту по готовности (5–15 мин)."
+            : "Запись отправлена. Транскрибация занимает 5–15 минут.",
         );
       } catch (e) {
         console.error(e);
