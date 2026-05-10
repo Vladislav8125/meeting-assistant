@@ -250,11 +250,14 @@ function RecentCard({ r }: { r: Recent }) {
           </span>
         </div>
         <div className="font-mono text-sm truncate">{r.file_name}</div>
-        {r.topic && (
-          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-            {r.topic}
-          </div>
-        )}
+        <div className="mt-1 flex items-center gap-2 flex-wrap">
+          {r.language && <LanguagePill lang={r.language} />}
+          {r.topic && (
+            <span className="text-xs text-muted-foreground line-clamp-1">
+              {r.topic}
+            </span>
+          )}
+        </div>
         <ProgressBar status={r.status} />
         <div className="mt-2 flex items-center justify-between text-[11px] font-mono">
           <span className="text-muted-foreground">
