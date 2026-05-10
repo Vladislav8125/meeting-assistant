@@ -1,6 +1,8 @@
 // Server-only analysis pipeline (chunking + synthesis).
 // Used by Fireflies webhook after transcription completes.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logAnalysis, detectLanguage } from "@/lib/analysis-logs.server";
+import { sendAnalysisReport } from "@/lib/email-report.server";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const ANALYZE_MODEL = "google/gemini-2.5-flash";
