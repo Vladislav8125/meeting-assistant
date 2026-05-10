@@ -101,7 +101,6 @@ export const analyzeRecording = createServerFn({ method: "POST" })
           url: data.publicUrl,
           title,
           webhook: WEBHOOK_URL,
-          language: "ru",
         },
       });
 
@@ -195,7 +194,7 @@ export const retryAnalysis = createServerFn({ method: "POST" })
         `mutation($input: AudioUploadInput!) {
           uploadAudio(input: $input) { success title message }
         }`,
-        { input: { url: publicUrl, title, webhook: WEBHOOK_URL, language: "ru" } },
+        { input: { url: publicUrl, title, webhook: WEBHOOK_URL } },
       );
       if (!result.uploadAudio?.success) {
         throw new Error(
