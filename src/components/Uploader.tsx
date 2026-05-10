@@ -150,6 +150,16 @@ export function Uploader() {
         />
       </div>
 
+      <input
+        type="email"
+        className="mt-3 w-full rounded-lg bg-input/40 border border-border px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand/60"
+        placeholder="Email для отчёта (опц.)"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        maxLength={200}
+        disabled={busy}
+      />
+
       <button
         type="button"
         onClick={submit}
