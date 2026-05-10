@@ -101,7 +101,6 @@ export const analyzeRecording = createServerFn({ method: "POST" })
           url: data.publicUrl,
           title,
           webhook: WEBHOOK_URL,
-          language: "ru",
         },
       });
 
