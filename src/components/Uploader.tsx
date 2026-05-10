@@ -12,6 +12,7 @@ export function Uploader() {
   const [file, setFile] = useState<File | null>(null);
   const [topic, setTopic] = useState("");
   const [participants, setParticipants] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
   const [lastId, setLastId] = useState<string | null>(null);
