@@ -48,7 +48,7 @@ function Index() {
     const load = () => {
       supabase
         .from("analyses")
-        .select("id,file_name,status,created_at,updated_at,topic")
+        .select("id,file_name,status,created_at,updated_at,topic,language")
         .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
         .order("created_at", { ascending: false })
         .limit(9)
