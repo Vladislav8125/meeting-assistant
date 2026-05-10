@@ -54,6 +54,14 @@ type Report = {
   transcript?: string;
 };
 
+type LogEntry = {
+  ts: string;
+  source: string;
+  level: "info" | "warn" | "error";
+  message: string;
+  data?: unknown;
+};
+
 type Analysis = {
   id: string;
   file_name: string;
@@ -66,6 +74,10 @@ type Analysis = {
   created_at: string;
   storage_path: string;
   mime_type: string | null;
+  language: string | null;
+  recipient_email: string | null;
+  email_sent_at: string | null;
+  logs: LogEntry[] | null;
 };
 
 function AnalysisPage() {
