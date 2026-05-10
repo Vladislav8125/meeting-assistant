@@ -34,6 +34,7 @@ type Recent = {
   created_at: string;
   updated_at: string | null;
   topic: string | null;
+  language: string | null;
 };
 
 function Index() {
