@@ -17,12 +17,16 @@ export type Database = {
       analyses: {
         Row: {
           created_at: string
+          email_sent_at: string | null
           error: string | null
           file_name: string
           file_size: number | null
           id: string
+          language: string | null
+          logs: Json
           mime_type: string | null
           participants: string | null
+          recipient_email: string | null
           report: Json | null
           status: string
           storage_path: string
@@ -32,12 +36,16 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email_sent_at?: string | null
           error?: string | null
           file_name: string
           file_size?: number | null
           id?: string
+          language?: string | null
+          logs?: Json
           mime_type?: string | null
           participants?: string | null
+          recipient_email?: string | null
           report?: Json | null
           status?: string
           storage_path: string
@@ -47,12 +55,16 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email_sent_at?: string | null
           error?: string | null
           file_name?: string
           file_size?: number | null
           id?: string
+          language?: string | null
+          logs?: Json
           mime_type?: string | null
           participants?: string | null
+          recipient_email?: string | null
           report?: Json | null
           status?: string
           storage_path?: string
@@ -67,7 +79,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      append_analysis_log: {
+        Args: { _entry: Json; _id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
