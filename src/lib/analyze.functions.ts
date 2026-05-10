@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { logAnalysis } from "@/lib/analysis-logs.server";
 
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
 
@@ -14,9 +15,6 @@ async function getAdmin() {
   });
 }
 
-// Build webhook URL using the project's stable URL.
-// VITE_SUPABASE_PROJECT_ID is unrelated; the Lovable project ID is hardcoded in
-// stable URL form: project--{lovable-project-id}.lovable.app
 const PROJECT_ID = "e71eef0d-2665-4ba3-ac78-e7a2c5599aac";
 const WEBHOOK_URL = `https://project--${PROJECT_ID}.lovable.app/api/public/fireflies-webhook`;
 
@@ -66,23 +64,19 @@ export const analyzeRecording = createServerFn({ method: "POST" })
         mimeType: z.string().min(1).max(100),
         topic: z.string().max(500).optional(),
         participants: z.string().max(1000).optional(),
+        recipientEmail: z.string().email().max(200).optional(),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
-      throw new Error("Supabase env not configured");
-
-    const { createClient } = await import("@supabase/supabase-js");
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const admin = await getAdmin();
 
     try {
-      // Title carries analysisId so the webhook can map back to our row.
       const title = `lvb-${data.analysisId}`;
+      const variables = {
+        input: { url: data.publicUrl, title, webhook: WEBHOOK_URL },
+      };
+      await logAnalysis(admin, data.analysisId, "fireflies", "info", "uploadAudio request", variables);
 
       const mutation = `
         mutation($input: AudioUploadInput!) {
@@ -96,13 +90,9 @@ export const analyzeRecording = createServerFn({ method: "POST" })
 
       const result = await fireflies<{
         uploadAudio: { success: boolean; title?: string; message?: string };
-      }>(mutation, {
-        input: {
-          url: data.publicUrl,
-          title,
-          webhook: WEBHOOK_URL,
-        },
-      });
+      }>(mutation, variables);
+
+      await logAnalysis(admin, data.analysisId, "fireflies", "info", "uploadAudio response", result);
 
       if (!result.uploadAudio?.success) {
         throw new Error(
@@ -116,6 +106,8 @@ export const analyzeRecording = createServerFn({ method: "POST" })
         .update({
           status: "transcribing",
           error: null,
+          language: "ru", // expected by default; refined post-transcription
+          recipient_email: data.recipientEmail ?? null,
         })
         .eq("id", data.analysisId);
 
@@ -123,6 +115,7 @@ export const analyzeRecording = createServerFn({ method: "POST" })
     } catch (e) {
       const message = e instanceof Error ? e.message : "Unknown error";
       console.error("analyzeRecording failed:", message);
+      await logAnalysis(admin, data.analysisId, "fireflies", "error", "uploadAudio failed", message);
       await admin
         .from("analyses")
         .update({ status: "failed", error: message })
@@ -131,9 +124,6 @@ export const analyzeRecording = createServerFn({ method: "POST" })
     }
   });
 
-// Manually re-trigger the entire pipeline for a record.
-// Strategy: first check if Fireflies already has a transcript with our title
-// (then run the analysis directly); otherwise re-upload the file to Fireflies.
 export const retryAnalysis = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z.object({ analysisId: z.string().uuid() }).parse(input),
@@ -143,18 +133,18 @@ export const retryAnalysis = createServerFn({ method: "POST" })
     try {
       const { data: row, error } = await admin
         .from("analyses")
-        .select("id, storage_path, mime_type, topic, participants")
+        .select("id, storage_path, mime_type, topic, participants, recipient_email")
         .eq("id", data.analysisId)
         .single();
       if (error || !row) throw new Error("Запись не найдена");
 
-      // Reset to transcribing so UI reflects retry immediately.
       await admin
         .from("analyses")
         .update({ status: "transcribing", error: null })
         .eq("id", data.analysisId);
 
-      // 1) Try to pick up an existing Fireflies transcript by title
+      await logAnalysis(admin, data.analysisId, "pipeline", "info", "Retry requested");
+
       const { findTranscriptByTitle, buildTranscriptText } = await import(
         "@/lib/fireflies.server"
       );
@@ -163,6 +153,7 @@ export const retryAnalysis = createServerFn({ method: "POST" })
       );
       const existing = await findTranscriptByTitle(`lvb-${data.analysisId}`);
       if (existing) {
+        await logAnalysis(admin, data.analysisId, "fireflies", "info", "Existing transcript found", { id: existing.id, title: existing.title, duration: existing.duration });
         const { transcript, participants, duration_estimate } =
           buildTranscriptText(existing);
         if (transcript.trim()) {
@@ -180,7 +171,6 @@ export const retryAnalysis = createServerFn({ method: "POST" })
         }
       }
 
-      // 2) Re-upload to Fireflies
       const { data: pub } = admin.storage
         .from("media")
         .getPublicUrl(row.storage_path as string);
@@ -188,14 +178,17 @@ export const retryAnalysis = createServerFn({ method: "POST" })
       if (!publicUrl) throw new Error("Не удалось получить ссылку на файл");
 
       const title = `lvb-${data.analysisId}`;
+      const variables = { input: { url: publicUrl, title, webhook: WEBHOOK_URL } };
+      await logAnalysis(admin, data.analysisId, "fireflies", "info", "Re-uploadAudio request", variables);
       const result = await fireflies<{
         uploadAudio: { success: boolean; message?: string };
       }>(
         `mutation($input: AudioUploadInput!) {
           uploadAudio(input: $input) { success title message }
         }`,
-        { input: { url: publicUrl, title, webhook: WEBHOOK_URL } },
+        variables,
       );
+      await logAnalysis(admin, data.analysisId, "fireflies", "info", "Re-uploadAudio response", result);
       if (!result.uploadAudio?.success) {
         throw new Error(
           "Fireflies отклонил загрузку: " +
@@ -205,6 +198,7 @@ export const retryAnalysis = createServerFn({ method: "POST" })
       return { ok: true, mode: "reuploaded" as const };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown";
+      await logAnalysis(admin, data.analysisId, "pipeline", "error", "Retry failed", msg);
       await admin
         .from("analyses")
         .update({ status: "failed", error: msg })
@@ -213,7 +207,6 @@ export const retryAnalysis = createServerFn({ method: "POST" })
     }
   });
 
-// Trigger the polling endpoint from the client (kicks the queue without waiting for cron).
 export const kickPoll = createServerFn({ method: "POST" }).handler(async () => {
   try {
     const url = `https://project--${PROJECT_ID}.lovable.app/api/public/poll-fireflies`;
@@ -223,3 +216,30 @@ export const kickPoll = createServerFn({ method: "POST" }).handler(async () => {
     return { ok: false, error: e instanceof Error ? e.message : "unknown" };
   }
 });
+
+// Manually re-send the report by email (useful when address was missing initially)
+export const sendReportEmail = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z
+      .object({
+        analysisId: z.string().uuid(),
+        recipientEmail: z.string().email().max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const admin = await getAdmin();
+    try {
+      await admin
+        .from("analyses")
+        .update({ recipient_email: data.recipientEmail })
+        .eq("id", data.analysisId);
+
+      const { sendAnalysisReport } = await import("@/lib/email-report.server");
+      const res = await sendAnalysisReport(admin, data.analysisId, data.recipientEmail);
+      return res;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unknown";
+      return { ok: false, error: msg };
+    }
+  });
