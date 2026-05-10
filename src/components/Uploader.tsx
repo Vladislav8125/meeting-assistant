@@ -12,6 +12,7 @@ export function Uploader() {
   const [file, setFile] = useState<File | null>(null);
   const [topic, setTopic] = useState("");
   const [participants, setParticipants] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
   const [lastId, setLastId] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export function Uploader() {
           storage_path: path,
           topic: topic || null,
           participants: participants || null,
+          recipient_email: email || null,
           status: "pending",
         })
         .select()
@@ -67,10 +69,13 @@ export function Uploader() {
             mimeType: file.type,
             topic: topic || undefined,
             participants: participants || undefined,
+            recipientEmail: email || undefined,
           },
         });
         toast.success(
-          "Запись отправлена. Транскрибация занимает 5–15 минут — следите в отчёте.",
+          email
+            ? "Запись отправлена. Отчёт придёт на почту по готовности (5–15 мин)."
+            : "Запись отправлена. Транскрибация занимает 5–15 минут.",
         );
       } catch (e) {
         console.error(e);
@@ -144,6 +149,16 @@ export function Uploader() {
           disabled={busy}
         />
       </div>
+
+      <input
+        type="email"
+        className="mt-3 w-full rounded-lg bg-input/40 border border-border px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand/60"
+        placeholder="Email для отчёта (опц.)"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        maxLength={200}
+        disabled={busy}
+      />
 
       <button
         type="button"

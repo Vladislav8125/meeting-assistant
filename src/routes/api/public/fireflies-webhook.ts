@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runAnalysisOnTranscript } from "@/lib/analyze-pipeline.server";
+import { logAnalysis } from "@/lib/analysis-logs.server";
 
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
 
@@ -87,6 +88,14 @@ export const Route = createFileRoute("/api/public/fireflies-webhook")({
             return new Response("unknown title", { status: 200 });
           }
           const analysisId = m[1];
+
+          await logAnalysis(admin, analysisId, "webhook", "info", "Webhook received", {
+            meetingId,
+            eventType: body?.eventType,
+            title,
+            duration: t.duration,
+            sentences_count: t.sentences?.length ?? 0,
+          });
 
           const sentences = t.sentences ?? [];
           const transcript = sentences

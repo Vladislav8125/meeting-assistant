@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runAnalysisOnTranscript } from "@/lib/analyze-pipeline.server";
 import { findTranscriptByTitle, buildTranscriptText } from "@/lib/fireflies.server";
+import { logAnalysis } from "@/lib/analysis-logs.server";
 
 const STUCK_AFTER_MIN = 90; // mark failed after this many minutes
 const POLL_BATCH = 10;
@@ -46,19 +47,25 @@ async function handle() {
         const t = await findTranscriptByTitle(`lvb-${id}`);
         if (!t) {
           if (ageMin > STUCK_AFTER_MIN) {
+            const errMsg = `Fireflies не вернул транскрипт за ${Math.round(ageMin)} мин`;
             await admin
               .from("analyses")
-              .update({
-                status: "failed",
-                error: `Fireflies не вернул транскрипт за ${Math.round(ageMin)} мин`,
-              })
+              .update({ status: "failed", error: errMsg })
               .eq("id", id);
+            await logAnalysis(admin, id, "poll", "error", "Timeout", { ageMin: Math.round(ageMin) });
             results.push({ id, outcome: "timeout" });
           } else {
+            await logAnalysis(admin, id, "poll", "info", "Still pending in Fireflies", { ageMin: Math.round(ageMin) });
             results.push({ id, outcome: "pending" });
           }
           continue;
         }
+
+        await logAnalysis(admin, id, "poll", "info", "Transcript ready in Fireflies", {
+          fireflies_id: t.id,
+          duration: t.duration,
+          sentences: t.sentences?.length ?? 0,
+        });
 
         const { transcript, participants, duration_estimate } =
           buildTranscriptText(t);

@@ -34,6 +34,7 @@ type Recent = {
   created_at: string;
   updated_at: string | null;
   topic: string | null;
+  language: string | null;
 };
 
 function Index() {
@@ -47,7 +48,7 @@ function Index() {
     const load = () => {
       supabase
         .from("analyses")
-        .select("id,file_name,status,created_at,updated_at,topic")
+        .select("id,file_name,status,created_at,updated_at,topic,language")
         .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
         .order("created_at", { ascending: false })
         .limit(9)
@@ -160,7 +161,7 @@ function Index() {
 
       <footer className="relative z-10 border-t border-border">
         <div className="max-w-6xl mx-auto px-6 py-6 text-xs text-muted-foreground font-mono">
-          © {new Date().getFullYear()} Lovable Analytics · MVP
+          © {new Date().getFullYear()} meetanalize · эффективное совещание
         </div>
       </footer>
     </div>
@@ -249,11 +250,14 @@ function RecentCard({ r }: { r: Recent }) {
           </span>
         </div>
         <div className="font-mono text-sm truncate">{r.file_name}</div>
-        {r.topic && (
-          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-            {r.topic}
-          </div>
-        )}
+        <div className="mt-1 flex items-center gap-2 flex-wrap">
+          {r.language && <LanguagePill lang={r.language} />}
+          {r.topic && (
+            <span className="text-xs text-muted-foreground line-clamp-1">
+              {r.topic}
+            </span>
+          )}
+        </div>
         <ProgressBar status={r.status} />
         <div className="mt-2 flex items-center justify-between text-[11px] font-mono">
           <span className="text-muted-foreground">
@@ -324,6 +328,21 @@ const STATUS_MAP: Record<
     bar: "bg-destructive",
   },
 };
+
+function LanguagePill({ lang }: { lang: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    ru: { label: "RU · Русский", cls: "bg-brand/15 text-brand border-brand/30" },
+    en: { label: "EN · English", cls: "bg-accent-2/15 text-accent-2 border-accent-2/30" },
+    mixed: { label: "Смешанный", cls: "bg-warn/15 text-warn border-warn/30" },
+    unknown: { label: "?", cls: "bg-muted text-muted-foreground border-border" },
+  };
+  const m = map[lang] ?? { label: lang.toUpperCase(), cls: "bg-muted text-muted-foreground border-border" };
+  return (
+    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${m.cls}`}>
+      {m.label}
+    </span>
+  );
+}
 
 function StatusPill({ status }: { status: string }) {
   const s = STATUS_MAP[status] ?? STATUS_MAP.pending;
