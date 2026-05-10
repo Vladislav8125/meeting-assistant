@@ -19,7 +19,7 @@ function safeTrim(value: unknown, max = 4000): unknown {
     try {
       const s = JSON.stringify(value);
       if (s.length <= max) return value;
-      return JSON.parse(s.slice(0, max - 20) + "\"…trimmed\"}").catch?.() ?? s.slice(0, max);
+      return s.slice(0, max) + "…[trimmed]";
     } catch {
       return String(value).slice(0, max);
     }
