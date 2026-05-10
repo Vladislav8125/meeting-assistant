@@ -1,10 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Dynamic import wrapper to keep the server-only module out of client bundles.
-async function getLog() {
+async function logAnalysis(
+  admin: SupabaseClient,
+  analysisId: string,
+  source: string,
+  level: "info" | "warn" | "error",
+  message: string,
+  data?: unknown,
+) {
   const m = await import("@/lib/analysis-logs.server");
-  return m.logAnalysis;
+  return m.logAnalysis(admin, analysisId, source, level, message, data);
 }
 
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
