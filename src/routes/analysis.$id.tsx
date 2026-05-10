@@ -151,9 +151,18 @@ function AnalysisPage() {
                 Участники: {data.participants}
               </div>
             )}
+            <div className="mt-2 flex items-center gap-2 flex-wrap text-xs">
+              {data.language && (
+                <span className="font-mono px-1.5 py-0.5 rounded border border-border bg-card/60">
+                  Язык: {data.language === "ru" ? "Русский" : data.language === "en" ? "English" : data.language}
+                </span>
+              )}
+            </div>
           </div>
           <ScoreBadge score={r?.overall_score} status={data.status} />
         </header>
+
+        <EmailSendBlock data={data} />
 
         {data.status !== "done" && data.status !== "failed" ? (
           <ProcessingState status={data.status} />
