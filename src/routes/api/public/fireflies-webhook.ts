@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runAnalysisOnTranscript } from "@/lib/analyze-pipeline.server";
+import { logAnalysis } from "@/lib/analysis-logs.server";
 
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
 
