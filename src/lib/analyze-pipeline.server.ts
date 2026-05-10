@@ -135,13 +135,20 @@ export async function runAnalysisOnTranscript(params: {
     .filter(Boolean)
     .join("\n");
 
+  const detectedLang = detectLanguage(transcript);
+  await logAnalysis(admin, analysisId, "pipeline", "info", "Transcript received", {
+    chars: transcript.length,
+    detected_language: detectedLang,
+  });
+
   await admin
     .from("analyses")
-    .update({ status: "analyzing", transcript })
+    .update({ status: "analyzing", transcript, language: detectedLang })
     .eq("id", analysisId);
 
   // Stage 2: chunked analysis (parallel)
   const chunks = chunkText(transcript, 6000, 400);
+  await logAnalysis(admin, analysisId, "pipeline", "info", `Chunking: ${chunks.length} fragments`);
   const findings: ChunkFinding[] = await Promise.all(
     chunks.map(async (chunk, idx) => {
       try {
@@ -157,7 +164,9 @@ export async function runAnalysisOnTranscript(params: {
         ]);
         return parseJsonLoose(content) as ChunkFinding;
       } catch (e) {
+        const msg = e instanceof Error ? e.message : "unknown";
         console.error("chunk failed", idx, e);
+        await logAnalysis(admin, analysisId, "pipeline", "warn", `Chunk ${idx + 1} failed`, msg);
         return {};
       }
     }),
@@ -200,7 +209,7 @@ export async function runAnalysisOnTranscript(params: {
   const synth = parseJsonLoose(synthContent) as Record<string, unknown>;
 
   const report = {
-    language: params.language,
+    language: detectedLang || params.language,
     duration_estimate: params.duration_estimate,
     participants: params.participants ?? [],
     ...synth,
@@ -211,4 +220,24 @@ export async function runAnalysisOnTranscript(params: {
     .from("analyses")
     .update({ status: "done", transcript, report: report as never, error: null })
     .eq("id", analysisId);
+
+  await logAnalysis(admin, analysisId, "pipeline", "info", "Analysis complete", {
+    overall_score: (synth as { overall_score?: number }).overall_score,
+  });
+
+  // Auto-send report by email if recipient was provided at upload time
+  try {
+    const { data: row } = await admin
+      .from("analyses")
+      .select("recipient_email, email_sent_at")
+      .eq("id", analysisId)
+      .single();
+    const to = row?.recipient_email as string | null | undefined;
+    if (to && !row?.email_sent_at) {
+      await sendAnalysisReport(admin, analysisId, to);
+    }
+  } catch (e) {
+    await logAnalysis(admin, analysisId, "email", "warn", "Auto-send skipped", e instanceof Error ? e.message : "unknown");
+  }
 }
+
