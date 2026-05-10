@@ -329,6 +329,21 @@ const STATUS_MAP: Record<
   },
 };
 
+function LanguagePill({ lang }: { lang: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    ru: { label: "RU · Русский", cls: "bg-brand/15 text-brand border-brand/30" },
+    en: { label: "EN · English", cls: "bg-accent-2/15 text-accent-2 border-accent-2/30" },
+    mixed: { label: "Смешанный", cls: "bg-warn/15 text-warn border-warn/30" },
+    unknown: { label: "?", cls: "bg-muted text-muted-foreground border-border" },
+  };
+  const m = map[lang] ?? { label: lang.toUpperCase(), cls: "bg-muted text-muted-foreground border-border" };
+  return (
+    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${m.cls}`}>
+      {m.label}
+    </span>
+  );
+}
+
 function StatusPill({ status }: { status: string }) {
   const s = STATUS_MAP[status] ?? STATUS_MAP.pending;
   return (
