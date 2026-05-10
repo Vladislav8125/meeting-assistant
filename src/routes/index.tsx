@@ -161,7 +161,7 @@ function Index() {
 
       <footer className="relative z-10 border-t border-border">
         <div className="max-w-6xl mx-auto px-6 py-6 text-xs text-muted-foreground font-mono">
-          © {new Date().getFullYear()} Lovable Analytics · MVP
+          © {new Date().getFullYear()} meetanalize · эффективное совещание
         </div>
       </footer>
     </div>
