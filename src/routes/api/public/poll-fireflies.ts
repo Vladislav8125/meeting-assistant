@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runAnalysisOnTranscript } from "@/lib/analyze-pipeline.server";
 import { findTranscriptByTitle, buildTranscriptText } from "@/lib/fireflies.server";
+import { logAnalysis } from "@/lib/analysis-logs.server";
 
 const STUCK_AFTER_MIN = 90; // mark failed after this many minutes
 const POLL_BATCH = 10;
