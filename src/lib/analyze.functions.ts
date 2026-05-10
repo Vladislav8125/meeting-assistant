@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { logAnalysis } from "@/lib/analysis-logs.server";
+
+// Dynamic import wrapper to keep the server-only module out of client bundles.
+async function getLog() {
+  const m = await import("@/lib/analysis-logs.server");
+  return m.logAnalysis;
+}
 
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
 
