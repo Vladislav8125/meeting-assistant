@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle, Mail, ChevronDown } from "lucide-react";
+import { sendReportEmail } from "@/lib/analyze.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/analysis/$id")({
   component: AnalysisPage,
