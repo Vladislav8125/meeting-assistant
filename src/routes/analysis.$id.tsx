@@ -179,8 +179,114 @@ function AnalysisPage() {
         ) : (
           r && <ReportView r={r} />
         )}
+
+        <LogsBlock logs={data.logs} />
       </div>
     </div>
+  );
+}
+
+function EmailSendBlock({ data }: { data: Analysis }) {
+  const [email, setEmail] = useState(data.recipient_email ?? "");
+  const [busy, setBusy] = useState(false);
+  const sendFn = useServerFn(sendReportEmail);
+  const canSend = data.status === "done";
+  const onSend = async () => {
+    if (!email) return toast.error("Введите email");
+    setBusy(true);
+    try {
+      const res = await sendFn({ data: { analysisId: data.id, recipientEmail: email } });
+      if (res?.ok) toast.success("Отчёт отправлен на " + email);
+      else toast.error(res?.error || "Не удалось отправить");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-6 rounded-2xl border border-border bg-card/40 p-4 flex flex-wrap gap-3 items-center">
+      <Mail className="h-4 w-4 text-brand" />
+      <div className="text-sm">
+        {data.email_sent_at ? (
+          <span className="text-muted-foreground">
+            Отправлено: <b className="text-foreground">{data.recipient_email}</b> ·{" "}
+            {new Date(data.email_sent_at).toLocaleString("ru-RU")}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Отправить отчёт на email</span>
+        )}
+      </div>
+      <input
+        type="email"
+        className="flex-1 min-w-[200px] rounded-lg bg-input/40 border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+        placeholder="you@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        disabled={busy || !canSend}
+      />
+      <button
+        type="button"
+        onClick={onSend}
+        disabled={busy || !canSend || !email}
+        className="rounded-lg bg-brand text-brand-foreground px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+      >
+        {busy ? "Отправляю…" : data.email_sent_at ? "Отправить ещё раз" : "Отправить"}
+      </button>
+      {!canSend && (
+        <div className="basis-full text-xs text-muted-foreground">
+          Кнопка станет активной, когда отчёт будет готов.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LogsBlock({ logs }: { logs: LogEntry[] | null }) {
+  const [open, setOpen] = useState(false);
+  const items = logs ?? [];
+  if (items.length === 0) return null;
+  const lvlCls: Record<string, string> = {
+    info: "text-muted-foreground",
+    warn: "text-warn",
+    error: "text-destructive",
+  };
+  return (
+    <section className="mt-8 rounded-2xl border border-border bg-card/60 p-5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between text-left"
+      >
+        <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">
+          Логи обработки · {items.length}
+        </h3>
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-4 max-h-[480px] overflow-auto space-y-2">
+          {items.map((e, i) => (
+            <div key={i} className="rounded-lg border border-border bg-background/40 p-3">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                <span className="text-muted-foreground">
+                  {new Date(e.ts).toLocaleString("ru-RU")}
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-muted">{e.source}</span>
+                <span className={lvlCls[e.level] ?? "text-muted-foreground"}>
+                  {e.level.toUpperCase()}
+                </span>
+              </div>
+              <div className="mt-1 text-sm">{e.message}</div>
+              {e.data !== undefined && e.data !== null && (
+                <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-[11px] text-muted-foreground bg-background/60 rounded p-2 max-h-48 overflow-auto">
+                  {typeof e.data === "string" ? e.data : JSON.stringify(e.data, null, 2)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
