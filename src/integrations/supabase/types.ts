@@ -17,6 +17,7 @@ export type Database = {
       analyses: {
         Row: {
           created_at: string
+          distributions: Json
           email_sent_at: string | null
           error: string | null
           file_name: string
@@ -25,6 +26,7 @@ export type Database = {
           language: string | null
           logs: Json
           mime_type: string | null
+          participant_emails: Json
           participants: string | null
           recipient_email: string | null
           report: Json | null
@@ -36,6 +38,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          distributions?: Json
           email_sent_at?: string | null
           error?: string | null
           file_name: string
@@ -44,6 +47,7 @@ export type Database = {
           language?: string | null
           logs?: Json
           mime_type?: string | null
+          participant_emails?: Json
           participants?: string | null
           recipient_email?: string | null
           report?: Json | null
@@ -55,6 +59,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          distributions?: Json
           email_sent_at?: string | null
           error?: string | null
           file_name?: string
@@ -63,6 +68,7 @@ export type Database = {
           language?: string | null
           logs?: Json
           mime_type?: string | null
+          participant_emails?: Json
           participants?: string | null
           recipient_email?: string | null
           report?: Json | null
@@ -74,12 +80,74 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_preparations: {
+        Row: {
+          agenda: string | null
+          checks: Json | null
+          created_at: string
+          expected_decision: string | null
+          goal: string | null
+          id: string
+          logs: Json
+          materials: Json
+          participants: string | null
+          readiness_score: number | null
+          recommendations: Json | null
+          status: string
+          topic: string
+          updated_at: string
+          verdict: string | null
+        }
+        Insert: {
+          agenda?: string | null
+          checks?: Json | null
+          created_at?: string
+          expected_decision?: string | null
+          goal?: string | null
+          id?: string
+          logs?: Json
+          materials?: Json
+          participants?: string | null
+          readiness_score?: number | null
+          recommendations?: Json | null
+          status?: string
+          topic: string
+          updated_at?: string
+          verdict?: string | null
+        }
+        Update: {
+          agenda?: string | null
+          checks?: Json | null
+          created_at?: string
+          expected_decision?: string | null
+          goal?: string | null
+          id?: string
+          logs?: Json
+          materials?: Json
+          participants?: string | null
+          readiness_score?: number | null
+          recommendations?: Json | null
+          status?: string
+          topic?: string
+          updated_at?: string
+          verdict?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      append_analysis_distribution: {
+        Args: { _entry: Json; _id: string }
+        Returns: undefined
+      }
       append_analysis_log: {
+        Args: { _entry: Json; _id: string }
+        Returns: undefined
+      }
+      append_preparation_log: {
         Args: { _entry: Json; _id: string }
         Returns: undefined
       }
