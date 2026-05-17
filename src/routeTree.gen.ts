@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MeetingRouteImport } from './routes/meeting'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalysisIdRouteImport } from './routes/analysis.$id'
 import { Route as ApiPublicPollFirefliesRouteImport } from './routes/api/public/poll-fireflies'
 import { Route as ApiPublicFirefliesWebhookRouteImport } from './routes/api/public/fireflies-webhook'
 
+const MeetingRoute = MeetingRouteImport.update({
+  id: '/meeting',
+  path: '/meeting',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -38,12 +44,14 @@ const ApiPublicFirefliesWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/meeting': typeof MeetingRoute
   '/analysis/$id': typeof AnalysisIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/meeting': typeof MeetingRoute
   '/analysis/$id': typeof AnalysisIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
@@ -51,6 +59,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/meeting': typeof MeetingRoute
   '/analysis/$id': typeof AnalysisIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
@@ -59,18 +68,21 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/meeting'
     | '/analysis/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/meeting'
     | '/analysis/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
   id:
     | '__root__'
     | '/'
+    | '/meeting'
     | '/analysis/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
@@ -78,6 +90,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MeetingRoute: typeof MeetingRoute
   AnalysisIdRoute: typeof AnalysisIdRoute
   ApiPublicFirefliesWebhookRoute: typeof ApiPublicFirefliesWebhookRoute
   ApiPublicPollFirefliesRoute: typeof ApiPublicPollFirefliesRoute
@@ -85,6 +98,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/meeting': {
+      id: '/meeting'
+      path: '/meeting'
+      fullPath: '/meeting'
+      preLoaderRoute: typeof MeetingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -118,6 +138,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MeetingRoute: MeetingRoute,
   AnalysisIdRoute: AnalysisIdRoute,
   ApiPublicFirefliesWebhookRoute: ApiPublicFirefliesWebhookRoute,
   ApiPublicPollFirefliesRoute: ApiPublicPollFirefliesRoute,
@@ -125,3 +146,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
