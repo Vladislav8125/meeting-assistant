@@ -9,21 +9,45 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PrepareRouteImport } from './routes/prepare'
 import { Route as MeetingRouteImport } from './routes/meeting'
+import { Route as DistributeRouteImport } from './routes/distribute'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PrepareIdRouteImport } from './routes/prepare.$id'
+import { Route as DistributeIdRouteImport } from './routes/distribute.$id'
 import { Route as AnalysisIdRouteImport } from './routes/analysis.$id'
 import { Route as ApiPublicPollFirefliesRouteImport } from './routes/api/public/poll-fireflies'
 import { Route as ApiPublicFirefliesWebhookRouteImport } from './routes/api/public/fireflies-webhook'
 
+const PrepareRoute = PrepareRouteImport.update({
+  id: '/prepare',
+  path: '/prepare',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MeetingRoute = MeetingRouteImport.update({
   id: '/meeting',
   path: '/meeting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DistributeRoute = DistributeRouteImport.update({
+  id: '/distribute',
+  path: '/distribute',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PrepareIdRoute = PrepareIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => PrepareRoute,
+} as any)
+const DistributeIdRoute = DistributeIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => DistributeRoute,
 } as any)
 const AnalysisIdRoute = AnalysisIdRouteImport.update({
   id: '/analysis/$id',
@@ -44,23 +68,35 @@ const ApiPublicFirefliesWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/distribute': typeof DistributeRouteWithChildren
   '/meeting': typeof MeetingRoute
+  '/prepare': typeof PrepareRouteWithChildren
   '/analysis/$id': typeof AnalysisIdRoute
+  '/distribute/$id': typeof DistributeIdRoute
+  '/prepare/$id': typeof PrepareIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/distribute': typeof DistributeRouteWithChildren
   '/meeting': typeof MeetingRoute
+  '/prepare': typeof PrepareRouteWithChildren
   '/analysis/$id': typeof AnalysisIdRoute
+  '/distribute/$id': typeof DistributeIdRoute
+  '/prepare/$id': typeof PrepareIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/distribute': typeof DistributeRouteWithChildren
   '/meeting': typeof MeetingRoute
+  '/prepare': typeof PrepareRouteWithChildren
   '/analysis/$id': typeof AnalysisIdRoute
+  '/distribute/$id': typeof DistributeIdRoute
+  '/prepare/$id': typeof PrepareIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
 }
@@ -68,29 +104,43 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/distribute'
     | '/meeting'
+    | '/prepare'
     | '/analysis/$id'
+    | '/distribute/$id'
+    | '/prepare/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/distribute'
     | '/meeting'
+    | '/prepare'
     | '/analysis/$id'
+    | '/distribute/$id'
+    | '/prepare/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
   id:
     | '__root__'
     | '/'
+    | '/distribute'
     | '/meeting'
+    | '/prepare'
     | '/analysis/$id'
+    | '/distribute/$id'
+    | '/prepare/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DistributeRoute: typeof DistributeRouteWithChildren
   MeetingRoute: typeof MeetingRoute
+  PrepareRoute: typeof PrepareRouteWithChildren
   AnalysisIdRoute: typeof AnalysisIdRoute
   ApiPublicFirefliesWebhookRoute: typeof ApiPublicFirefliesWebhookRoute
   ApiPublicPollFirefliesRoute: typeof ApiPublicPollFirefliesRoute
@@ -98,11 +148,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/prepare': {
+      id: '/prepare'
+      path: '/prepare'
+      fullPath: '/prepare'
+      preLoaderRoute: typeof PrepareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/meeting': {
       id: '/meeting'
       path: '/meeting'
       fullPath: '/meeting'
       preLoaderRoute: typeof MeetingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/distribute': {
+      id: '/distribute'
+      path: '/distribute'
+      fullPath: '/distribute'
+      preLoaderRoute: typeof DistributeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -111,6 +175,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/prepare/$id': {
+      id: '/prepare/$id'
+      path: '/$id'
+      fullPath: '/prepare/$id'
+      preLoaderRoute: typeof PrepareIdRouteImport
+      parentRoute: typeof PrepareRoute
+    }
+    '/distribute/$id': {
+      id: '/distribute/$id'
+      path: '/$id'
+      fullPath: '/distribute/$id'
+      preLoaderRoute: typeof DistributeIdRouteImport
+      parentRoute: typeof DistributeRoute
     }
     '/analysis/$id': {
       id: '/analysis/$id'
@@ -136,9 +214,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DistributeRouteChildren {
+  DistributeIdRoute: typeof DistributeIdRoute
+}
+
+const DistributeRouteChildren: DistributeRouteChildren = {
+  DistributeIdRoute: DistributeIdRoute,
+}
+
+const DistributeRouteWithChildren = DistributeRoute._addFileChildren(
+  DistributeRouteChildren,
+)
+
+interface PrepareRouteChildren {
+  PrepareIdRoute: typeof PrepareIdRoute
+}
+
+const PrepareRouteChildren: PrepareRouteChildren = {
+  PrepareIdRoute: PrepareIdRoute,
+}
+
+const PrepareRouteWithChildren =
+  PrepareRoute._addFileChildren(PrepareRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DistributeRoute: DistributeRouteWithChildren,
   MeetingRoute: MeetingRoute,
+  PrepareRoute: PrepareRouteWithChildren,
   AnalysisIdRoute: AnalysisIdRoute,
   ApiPublicFirefliesWebhookRoute: ApiPublicFirefliesWebhookRoute,
   ApiPublicPollFirefliesRoute: ApiPublicPollFirefliesRoute,
@@ -146,3 +249,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
