@@ -22,8 +22,11 @@ import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
 import { Route as ApiPublicPollFirefliesRouteImport } from './routes/api/public/poll-fireflies'
 import { Route as ApiPublicFirefliesWebhookRouteImport } from './routes/api/public/fireflies-webhook'
+import { Route as AuthenticatedAppMeetingRouteImport } from './routes/_authenticated/app/meeting'
 import { Route as AuthenticatedAppMatrixRouteImport } from './routes/_authenticated/app/matrix'
+import { Route as AuthenticatedAppJournalRouteImport } from './routes/_authenticated/app/journal'
 import { Route as AuthenticatedAppChecklistRouteImport } from './routes/_authenticated/app/checklist'
+import { Route as AuthenticatedAppMeetingIdRouteImport } from './routes/_authenticated/app/meeting.$id'
 import { Route as AuthenticatedAppMatrixIdRouteImport } from './routes/_authenticated/app/matrix.$id'
 import { Route as AuthenticatedAppChecklistIdRouteImport } from './routes/_authenticated/app/checklist.$id'
 
@@ -92,9 +95,19 @@ const ApiPublicFirefliesWebhookRoute =
     path: '/api/public/fireflies-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAppMeetingRoute = AuthenticatedAppMeetingRouteImport.update({
+  id: '/meeting',
+  path: '/meeting',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
 const AuthenticatedAppMatrixRoute = AuthenticatedAppMatrixRouteImport.update({
   id: '/matrix',
   path: '/matrix',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
+const AuthenticatedAppJournalRoute = AuthenticatedAppJournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
   getParentRoute: () => AuthenticatedAppRouteRoute,
 } as any)
 const AuthenticatedAppChecklistRoute =
@@ -102,6 +115,12 @@ const AuthenticatedAppChecklistRoute =
     id: '/checklist',
     path: '/checklist',
     getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppMeetingIdRoute =
+  AuthenticatedAppMeetingIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAppMeetingRoute,
   } as any)
 const AuthenticatedAppMatrixIdRoute =
   AuthenticatedAppMatrixIdRouteImport.update({
@@ -127,12 +146,15 @@ export interface FileRoutesByFullPath {
   '/distribute/$id': typeof DistributeIdRoute
   '/prepare/$id': typeof PrepareIdRoute
   '/app/checklist': typeof AuthenticatedAppChecklistRouteWithChildren
+  '/app/journal': typeof AuthenticatedAppJournalRoute
   '/app/matrix': typeof AuthenticatedAppMatrixRouteWithChildren
+  '/app/meeting': typeof AuthenticatedAppMeetingRouteWithChildren
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
+  '/app/meeting/$id': typeof AuthenticatedAppMeetingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -144,12 +166,15 @@ export interface FileRoutesByTo {
   '/distribute/$id': typeof DistributeIdRoute
   '/prepare/$id': typeof PrepareIdRoute
   '/app/checklist': typeof AuthenticatedAppChecklistRouteWithChildren
+  '/app/journal': typeof AuthenticatedAppJournalRoute
   '/app/matrix': typeof AuthenticatedAppMatrixRouteWithChildren
+  '/app/meeting': typeof AuthenticatedAppMeetingRouteWithChildren
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
+  '/app/meeting/$id': typeof AuthenticatedAppMeetingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -164,12 +189,15 @@ export interface FileRoutesById {
   '/distribute/$id': typeof DistributeIdRoute
   '/prepare/$id': typeof PrepareIdRoute
   '/_authenticated/app/checklist': typeof AuthenticatedAppChecklistRouteWithChildren
+  '/_authenticated/app/journal': typeof AuthenticatedAppJournalRoute
   '/_authenticated/app/matrix': typeof AuthenticatedAppMatrixRouteWithChildren
+  '/_authenticated/app/meeting': typeof AuthenticatedAppMeetingRouteWithChildren
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/_authenticated/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
+  '/_authenticated/app/meeting/$id': typeof AuthenticatedAppMeetingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -184,12 +212,15 @@ export interface FileRouteTypes {
     | '/distribute/$id'
     | '/prepare/$id'
     | '/app/checklist'
+    | '/app/journal'
     | '/app/matrix'
+    | '/app/meeting'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
     | '/app/'
     | '/app/checklist/$id'
     | '/app/matrix/$id'
+    | '/app/meeting/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -201,12 +232,15 @@ export interface FileRouteTypes {
     | '/distribute/$id'
     | '/prepare/$id'
     | '/app/checklist'
+    | '/app/journal'
     | '/app/matrix'
+    | '/app/meeting'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
     | '/app'
     | '/app/checklist/$id'
     | '/app/matrix/$id'
+    | '/app/meeting/$id'
   id:
     | '__root__'
     | '/'
@@ -220,12 +254,15 @@ export interface FileRouteTypes {
     | '/distribute/$id'
     | '/prepare/$id'
     | '/_authenticated/app/checklist'
+    | '/_authenticated/app/journal'
     | '/_authenticated/app/matrix'
+    | '/_authenticated/app/meeting'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
     | '/_authenticated/app/'
     | '/_authenticated/app/checklist/$id'
     | '/_authenticated/app/matrix/$id'
+    | '/_authenticated/app/meeting/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -333,11 +370,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFirefliesWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app/meeting': {
+      id: '/_authenticated/app/meeting'
+      path: '/meeting'
+      fullPath: '/app/meeting'
+      preLoaderRoute: typeof AuthenticatedAppMeetingRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
     '/_authenticated/app/matrix': {
       id: '/_authenticated/app/matrix'
       path: '/matrix'
       fullPath: '/app/matrix'
       preLoaderRoute: typeof AuthenticatedAppMatrixRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/journal': {
+      id: '/_authenticated/app/journal'
+      path: '/journal'
+      fullPath: '/app/journal'
+      preLoaderRoute: typeof AuthenticatedAppJournalRouteImport
       parentRoute: typeof AuthenticatedAppRouteRoute
     }
     '/_authenticated/app/checklist': {
@@ -346,6 +397,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/checklist'
       preLoaderRoute: typeof AuthenticatedAppChecklistRouteImport
       parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/meeting/$id': {
+      id: '/_authenticated/app/meeting/$id'
+      path: '/$id'
+      fullPath: '/app/meeting/$id'
+      preLoaderRoute: typeof AuthenticatedAppMeetingIdRouteImport
+      parentRoute: typeof AuthenticatedAppMeetingRoute
     }
     '/_authenticated/app/matrix/$id': {
       id: '/_authenticated/app/matrix/$id'
@@ -392,15 +450,33 @@ const AuthenticatedAppMatrixRouteWithChildren =
     AuthenticatedAppMatrixRouteChildren,
   )
 
+interface AuthenticatedAppMeetingRouteChildren {
+  AuthenticatedAppMeetingIdRoute: typeof AuthenticatedAppMeetingIdRoute
+}
+
+const AuthenticatedAppMeetingRouteChildren: AuthenticatedAppMeetingRouteChildren =
+  {
+    AuthenticatedAppMeetingIdRoute: AuthenticatedAppMeetingIdRoute,
+  }
+
+const AuthenticatedAppMeetingRouteWithChildren =
+  AuthenticatedAppMeetingRoute._addFileChildren(
+    AuthenticatedAppMeetingRouteChildren,
+  )
+
 interface AuthenticatedAppRouteRouteChildren {
   AuthenticatedAppChecklistRoute: typeof AuthenticatedAppChecklistRouteWithChildren
+  AuthenticatedAppJournalRoute: typeof AuthenticatedAppJournalRoute
   AuthenticatedAppMatrixRoute: typeof AuthenticatedAppMatrixRouteWithChildren
+  AuthenticatedAppMeetingRoute: typeof AuthenticatedAppMeetingRouteWithChildren
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
 const AuthenticatedAppRouteRouteChildren: AuthenticatedAppRouteRouteChildren = {
   AuthenticatedAppChecklistRoute: AuthenticatedAppChecklistRouteWithChildren,
+  AuthenticatedAppJournalRoute: AuthenticatedAppJournalRoute,
   AuthenticatedAppMatrixRoute: AuthenticatedAppMatrixRouteWithChildren,
+  AuthenticatedAppMeetingRoute: AuthenticatedAppMeetingRouteWithChildren,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
 
