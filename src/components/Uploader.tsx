@@ -44,9 +44,12 @@ export function Uploader() {
       const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
 
       setProgress("Создаю запись…");
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Войдите в аккаунт");
       const { data: row, error: insErr } = await supabase
         .from("analyses")
         .insert({
+          user_id: u.user.id,
           file_name: file.name,
           file_size: file.size,
           mime_type: file.type,
@@ -176,7 +179,7 @@ export function Uploader() {
       </button>
       {lastId && !busy && (
         <Link
-          to="/analysis/$id"
+          to="/app/meeting/$id"
           params={{ id: lastId }}
           className="mt-4 block text-center rounded-lg border border-brand/40 bg-brand/10 text-brand px-4 py-2.5 text-sm font-mono hover:bg-brand/20 transition"
         >
