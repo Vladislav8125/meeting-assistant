@@ -35,6 +35,7 @@ export type Database = {
           topic: string | null
           transcript: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -56,6 +57,7 @@ export type Database = {
           topic?: string | null
           transcript?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -77,12 +79,53 @@ export type Database = {
           topic?: string | null
           transcript?: string | null
           updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      meeting_checklists: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          meeting_date: string | null
+          moderator: string | null
+          notes: string | null
+          score: number | null
+          topic: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          meeting_date?: string | null
+          moderator?: string | null
+          notes?: string | null
+          score?: number | null
+          topic: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          meeting_date?: string | null
+          moderator?: string | null
+          notes?: string | null
+          score?: number | null
+          topic?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
       meeting_preparations: {
         Row: {
           agenda: string | null
+          blocking_count: number | null
           checks: Json | null
           created_at: string
           expected_decision: string | null
@@ -90,16 +133,23 @@ export type Database = {
           id: string
           logs: Json
           materials: Json
+          meeting_date: string | null
+          moderator: string | null
           participants: string | null
+          readiness_percent: number | null
           readiness_score: number | null
           recommendations: Json | null
+          stages: Json
           status: string
           topic: string
           updated_at: string
+          user_id: string | null
           verdict: string | null
+          verdict_label: string | null
         }
         Insert: {
           agenda?: string | null
+          blocking_count?: number | null
           checks?: Json | null
           created_at?: string
           expected_decision?: string | null
@@ -107,16 +157,23 @@ export type Database = {
           id?: string
           logs?: Json
           materials?: Json
+          meeting_date?: string | null
+          moderator?: string | null
           participants?: string | null
+          readiness_percent?: number | null
           readiness_score?: number | null
           recommendations?: Json | null
+          stages?: Json
           status?: string
           topic: string
           updated_at?: string
+          user_id?: string | null
           verdict?: string | null
+          verdict_label?: string | null
         }
         Update: {
           agenda?: string | null
+          blocking_count?: number | null
           checks?: Json | null
           created_at?: string
           expected_decision?: string | null
@@ -124,13 +181,19 @@ export type Database = {
           id?: string
           logs?: Json
           materials?: Json
+          meeting_date?: string | null
+          moderator?: string | null
           participants?: string | null
+          readiness_percent?: number | null
           readiness_score?: number | null
           recommendations?: Json | null
+          stages?: Json
           status?: string
           topic?: string
           updated_at?: string
+          user_id?: string | null
           verdict?: string | null
+          verdict_label?: string | null
         }
         Relationships: []
       }
