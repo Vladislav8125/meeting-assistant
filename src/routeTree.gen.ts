@@ -12,10 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PrepareRouteImport } from './routes/prepare'
 import { Route as MeetingRouteImport } from './routes/meeting'
 import { Route as DistributeRouteImport } from './routes/distribute'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PrepareIdRouteImport } from './routes/prepare.$id'
 import { Route as DistributeIdRouteImport } from './routes/distribute.$id'
 import { Route as AnalysisIdRouteImport } from './routes/analysis.$id'
+import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticated/app/route'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
 import { Route as ApiPublicPollFirefliesRouteImport } from './routes/api/public/poll-fireflies'
 import { Route as ApiPublicFirefliesWebhookRouteImport } from './routes/api/public/fireflies-webhook'
 
@@ -32,6 +36,15 @@ const MeetingRoute = MeetingRouteImport.update({
 const DistributeRoute = DistributeRouteImport.update({
   id: '/distribute',
   path: '/distribute',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -54,6 +67,16 @@ const AnalysisIdRoute = AnalysisIdRouteImport.update({
   path: '/analysis/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAppRouteRoute = AuthenticatedAppRouteRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
 const ApiPublicPollFirefliesRoute = ApiPublicPollFirefliesRouteImport.update({
   id: '/api/public/poll-fireflies',
   path: '/api/public/poll-fireflies',
@@ -68,17 +91,21 @@ const ApiPublicFirefliesWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/distribute': typeof DistributeRouteWithChildren
   '/meeting': typeof MeetingRoute
   '/prepare': typeof PrepareRouteWithChildren
+  '/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/analysis/$id': typeof AnalysisIdRoute
   '/distribute/$id': typeof DistributeIdRoute
   '/prepare/$id': typeof PrepareIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/distribute': typeof DistributeRouteWithChildren
   '/meeting': typeof MeetingRoute
   '/prepare': typeof PrepareRouteWithChildren
@@ -87,34 +114,43 @@ export interface FileRoutesByTo {
   '/prepare/$id': typeof PrepareIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
+  '/app': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/distribute': typeof DistributeRouteWithChildren
   '/meeting': typeof MeetingRoute
   '/prepare': typeof PrepareRouteWithChildren
+  '/_authenticated/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/analysis/$id': typeof AnalysisIdRoute
   '/distribute/$id': typeof DistributeIdRoute
   '/prepare/$id': typeof PrepareIdRoute
   '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
   '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/distribute'
     | '/meeting'
     | '/prepare'
+    | '/app'
     | '/analysis/$id'
     | '/distribute/$id'
     | '/prepare/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/distribute'
     | '/meeting'
     | '/prepare'
@@ -123,21 +159,28 @@ export interface FileRouteTypes {
     | '/prepare/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
+    | '/app'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
+    | '/auth'
     | '/distribute'
     | '/meeting'
     | '/prepare'
+    | '/_authenticated/app'
     | '/analysis/$id'
     | '/distribute/$id'
     | '/prepare/$id'
     | '/api/public/fireflies-webhook'
     | '/api/public/poll-fireflies'
+    | '/_authenticated/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   DistributeRoute: typeof DistributeRouteWithChildren
   MeetingRoute: typeof MeetingRoute
   PrepareRoute: typeof PrepareRouteWithChildren
@@ -169,6 +212,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DistributeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -197,6 +254,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalysisIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
     '/api/public/poll-fireflies': {
       id: '/api/public/poll-fireflies'
       path: '/api/public/poll-fireflies'
@@ -213,6 +284,30 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedAppRouteRouteChildren {
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+}
+
+const AuthenticatedAppRouteRouteChildren: AuthenticatedAppRouteRouteChildren = {
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+}
+
+const AuthenticatedAppRouteRouteWithChildren =
+  AuthenticatedAppRouteRoute._addFileChildren(
+    AuthenticatedAppRouteRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppRouteRoute: typeof AuthenticatedAppRouteRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppRouteRoute: AuthenticatedAppRouteRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface DistributeRouteChildren {
   DistributeIdRoute: typeof DistributeIdRoute
@@ -239,6 +334,8 @@ const PrepareRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   DistributeRoute: DistributeRouteWithChildren,
   MeetingRoute: MeetingRoute,
   PrepareRoute: PrepareRouteWithChildren,
@@ -249,3 +346,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
