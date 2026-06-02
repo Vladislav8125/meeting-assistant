@@ -6,9 +6,9 @@ import type { ChecklistItem } from "@/lib/checklist-config";
 import type { MatrixStage } from "@/lib/matrix-config";
 import { MATRIX_STAGES, getStatusLabel, stageScorePct } from "@/lib/matrix-config";
 
-// pdfmake v0.3 vfs is exported as default
+// vfs_fonts.js exports `module.exports = vfs` directly
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(pdfMake as any).vfs = (pdfFonts as any).vfs ?? (pdfFonts as unknown as { default?: { vfs?: unknown } }).default?.vfs;
+(pdfMake as any).vfs = pdfFonts as unknown as Record<string, string>;
 
 const HEADER_FOOTER = {
   styles: {
