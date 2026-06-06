@@ -1,91 +1,130 @@
-# План: личный кабинет + новая логика стадий + журнал
+# Автоматизация матрицы готовности (Стадия 2)
 
-## 1. Авторизация (email/пароль без подтверждения)
+Сейчас пользователь вручную выбирает статус для каждого из 10 этапов. Заменим это на загрузку документов + один AI-вызов, который вернёт статусы по всем этапам сразу. Пользователю останется только проверить и заполнить организационные поля (ответственный, срок).
 
-- Включить `auto_confirm_email = true` через `configure_auth`.
-- Страница `/auth` — единый экран Вход / Регистрация (email + пароль), без OAuth.
-- Защищённая ветка `src/routes/_authenticated/route.tsx` (`ssr:false`, `beforeLoad` → `supabase.auth.getUser()` → редирект на `/auth`).
-- `onAuthStateChange` в `__root.tsx` для инвалидации кэша.
-- Кнопка «Выйти» в сайдбаре.
+## Что меняется в UX
 
-## 2. Привязка данных к пользователю (приватность)
+Страница `/app/matrix` получает новый верхний блок:
 
-Миграция:
-- Добавить `user_id uuid` (NOT NULL после backfill) в `analyses` и `meeting_preparations` (+ новая таблица `meeting_checklists`).
-- Удалить публичные RLS-политики `public read/insert/update/...`.
-- Новые политики: `auth.uid() = user_id` для SELECT / INSERT / UPDATE / DELETE.
-- GRANT-ы только для `authenticated` и `service_role` (не `anon`).
-- Индексы на `user_id` + `created_at`.
+1. **Метаданные совещания** — тема, дата, модератор (как сейчас).
+2. **Загрузка материалов** — drag-and-drop зона для файлов:
+   - Повестка (PDF/DOCX/TXT/MD)
+   - Презентация (PPTX/PDF)
+   - Сопроводительные материалы (любые документы)
+   - Опционально: текст в свободной форме (описание встречи, цель, участники)
+3. **Кнопка «Проанализировать материалы»** — запускает AI-анализ.
+4. **Прогресс-бар** во время анализа (5–15 сек).
+5. После ответа AI таблица из 10 этапов заполняется автоматически:
+   - **Статус** — проставлен AI (можно переопределить вручную)
+   - **Комментарий** — короткое обоснование от AI («в повестке нет тайминга», «цель сформулирована в разделе X»)
+   - **Ответственный / Срок** — пустые, заполняются вручную (AI не может их вывести из документов надёжно)
+6. Индикация: рядом со статусом помечается, кто его поставил — AI или человек (badge `AI` / `manual`).
 
-Серверные функции (`createServerFn` + `requireSupabaseAuth`) фильтруют по `userId` автоматически через RLS.
+## Архитектура
 
-## 3. Левая боковая панель
+```text
+[Browser]                          [Server]                       [Lovable AI Gateway]
+─────────                          ────────                       ───────────────────
+Upload files →  Supabase Storage
+                (user_id/matrix/{prepId}/...)
+                                          
+Click "Analyze" → analyzeMatrix()    →  parseDocuments() (текст из PDF/DOCX/PPTX)
+   serverFn                              ↓
+                                         buildPrompt(10 этапов + критерии + текст)
+                                         ↓
+                                         generateText() с Output.object schema  →  google/gemini-3-flash-preview
+                                         ↓
+                                         возвращает {stages: [{key, status_index, confidence, rationale}]}
+                                  ←  JSON со статусами + обоснованиями
+Заполняет форму, badge="AI"
+```
 
-Новый компонент `AppSidebar` (shadcn `Sidebar`, `collapsible="icon"`) заменяет `TopNav`. Пункты:
+## Технические детали
 
-- `1 · Чек-лист подготовки` → `/app/checklist`
-- `2 · Журнал + матрица` → `/app/matrix`
-- `3 · Запись и анализ` → `/app/meeting`
-- `Все совещания` → `/app/journal`
-- внизу: email пользователя + Выйти
+### 1. Парсинг документов на сервере
 
-Все маршруты под `/_authenticated/app/...`.
+Новый файл `src/lib/document-parser.server.ts`:
+- PDF → `pdf-parse` (pure JS, работает в Worker)
+- DOCX → `mammoth` (extract raw text)
+- PPTX → `pptx-text-parser` или собственная распаковка zip + xml (pptx — это zip с XML)
+- TXT/MD — `await file.text()`
+- Возвращает `{ filename, kind, text }[]`
 
-## 4. Новая логика трёх стадий
+Файлы скачиваются из Storage через `supabaseAdmin.storage.from('media').download(path)` внутри серверной функции.
 
-### Стадия 1 — Чек-лист «Успешное совещание» (16 правил)
+### 2. Новая server function
 
-Новая таблица `meeting_checklists`:
-- `topic, meeting_date, moderator`
-- `items jsonb` — массив 25 факт-чеков с полями `{ rule_no, rule_title, fact, weight, done }` (предзаполнен по xlsx)
-- `score numeric` — Σ(weight × done) / Σweight × 100
-- `notes` (отвлечения от повестки, экономия времени)
+`src/lib/matrix-ai.functions.ts`:
 
-UI `/app/checklist` — список + создать. `/app/checklist/$id` — таблица 25 строк с чекбоксами «Выполнено», справа автосумма % и распределение по правилам. Кнопка «Сохранить итог».
+```ts
+export const analyzeMatrix = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({
+    preparation_id: z.string().uuid(),
+    storage_paths: z.array(z.string()).max(10),
+    free_text: z.string().max(20000).optional(),
+  }).parse)
+  .handler(async ({ data, context }) => {
+    // 1. Скачать и распарсить все файлы
+    // 2. Собрать промпт: системный (правила оценки) + контекст (тексты)
+    // 3. Один вызов generateText с Output.object схемой на 10 этапов
+    // 4. Записать ai_analysis в meeting_preparations.checks (jsonb)
+    // 5. Вернуть результат фронту
+  });
+```
 
-### Стадия 2 — Журнал + матрица статусов (10 этапов подготовки)
+### 3. AI промпт (один на все 10 этапов)
 
-Расширяем существующую `meeting_preparations`:
-- Добавить `stages jsonb` — 10 этапов из матрицы со схемой `{ key, title, status, status_index, responsible, due_date, comment, weight }`.
-- Добавить `readiness_percent`, `blocking_count`, `verdict_label` (computed at save).
+Системный промпт описывает критерии для каждого этапа в виде JSON-словаря: `{ "goal": { statuses: ["Не определена", ...], criteria: "..." }, ... }`. Берётся из расширенного `MATRIX_STAGES` (добавим поле `criteria: string` к каждому этапу).
 
-UI `/app/matrix` — список подготовок. `/app/matrix/$id` — форма по шаблону xlsx (название, дата, модератор) + таблица 10 этапов с `Select` статуса (варианты из матрицы), полями «Ответственный / Срок / Комментарий», справа вес и оценка. Внизу итог: % готовности, кол-во блокирующих, вердикт («НУЖНА ДОРАБОТКА» / «ГОТОВО»). Кнопка AI-перепроверки остаётся.
+Модель: `google/gemini-3-flash-preview` (дёшево, быстро, поддерживает структурированный вывод).
 
-Матрица статусов хранится константой в `src/lib/matrix-config.ts`.
+Схема ответа (Zod, передаётся через `Output.object`):
+```ts
+z.object({
+  stages: z.array(z.object({
+    key: z.enum(["goal","necessity","participants",...]),
+    status_index: z.number().int().min(0).max(3),
+    confidence: z.number().min(0).max(1),
+    rationale: z.string().max(300),
+  })).length(10)
+})
+```
 
-### Стадия 3 — Запись + анализ + PDF (как сейчас)
+### 4. Расширение `MATRIX_STAGES`
 
-`/app/meeting` — текущий поток без изменений в логике (Fireflies → транскрипт → AI). Добавления:
-- Кнопка **«Скачать PDF»** в `/app/meeting/$id` — серверная функция `generateReportPdf` (использует `pdf-lib`/`@react-pdf/renderer`) собирает summary, оценку, action items, language → возвращает base64, скачивается клиентом.
-- Блок рассылки остаётся под кнопкой PDF (не отдельная стадия).
+В `src/lib/matrix-config.ts` к каждому этапу добавим `criteria: string` — что AI должен искать в материалах, чтобы поставить тот или иной статус. Пример для "goal":
+> «Цель не определена» — в материалах нет явной формулировки цели. «Черновик» — упомянута, но размыто. «Уточнена» — есть SMART-формулировка. «Утверждена» — указано, что цель согласована с заказчиком/руководителем.
 
-## 5. Вкладка «Все совещания» (`/app/journal`)
+### 5. Схема БД
 
-Объединённый список из трёх источников (server fn `loadJournal`):
-- из `meeting_checklists` — оценка по чек-листу
-- из `meeting_preparations` — % готовности, вердикт
-- из `analyses` — оценка LLM, язык, статус
+Не требует миграции — переиспользуем существующее поле `meeting_preparations.checks` (jsonb) для хранения сырых ответов AI (rationale, confidence) и `stages` для итоговой матрицы. Добавляем в каждый stage поле `source: "ai" | "manual"` (хранится в JSONB, типизация на фронте).
 
-Колонки таблицы: Дата · Тема · Модератор · % готовности · Оценка чек-листа · Оценка анализа · Статус · Язык · → детали.
+### 6. UI компоненты
 
-Фильтры (клиентские): по дате (range), статусу, языку, минимальной оценке.
+- `src/components/MatrixDocUploader.tsx` — загрузка в Storage, прогресс, список загруженных.
+- Обновить `src/routes/_authenticated/app/matrix.$id.tsx`: добавить блок загрузки, кнопку «Проанализировать», бейджи AI/manual, отображение `rationale` в подсказке (tooltip) рядом со статусом.
+- Кнопка «Сбросить к AI» и «Пересчитать» для отдельных этапов.
 
-Кнопка **«Экспорт в Excel»** — серверная функция строит .xlsx через `exceljs` и отдаёт файл.
+### 7. Безопасность и лимиты
 
-## 6. Технические правки
+- Файлы — в приватный бакет `media`, путь `${user.id}/matrix/${preparation_id}/...` (как уже сделано в Stage 3).
+- Лимит: 10 файлов, ≤ 5 МБ каждый, суммарно ≤ 20 МБ текста после извлечения (обрезаем).
+- Все вызовы AI — на сервере через `LOVABLE_API_KEY`.
+- Обработка ошибок Lovable AI: 429 → toast «попробуйте ещё раз», 402 → «закончились кредиты, пополните в Cloud».
 
-- `__root.tsx` — `SidebarProvider`-обёртка только под `_authenticated`; публичные `/`, `/auth` — без сайдбара.
-- `src/routes/index.tsx` — лендинг (как сейчас), кнопка «Войти» вместо «Начать».
-- Удалить `TopNav` со страниц приложения.
-- Footer оставить.
-- Все существующие сервер-функции получают `requireSupabaseAuth` и фильтр по `user_id`.
+## Поэтапная реализация
 
-## 7. Порядок реализации
+1. Расширить `MATRIX_STAGES` критериями.
+2. Добавить `document-parser.server.ts` + установить `pdf-parse`, `mammoth`.
+3. Добавить `matrix-ai.functions.ts` с `analyzeMatrix` server function.
+4. Добавить `MatrixDocUploader` и интегрировать в `matrix.$id.tsx`.
+5. Обновить тип `MatrixStage` (`source: "ai" | "manual"`, `rationale?: string`, `confidence?: number`) и логику сводки.
+6. Проверить на реальной повестке: что AI правильно понимает критерии и не «галлюцинирует» статус «Утверждено» там, где его нет.
 
-1. Миграция: auth + user_id + RLS + новая таблица `meeting_checklists`.
-2. `_authenticated` layout, `/auth`, AppSidebar.
-3. Стадия 1 (чек-лист) — таблица, route, server fns, UI.
-4. Стадия 2 — расширение matrix, переписать форму.
-5. Стадия 3 — PDF download.
-6. `/app/journal` + Excel export.
-7. Чистка старых публичных политик и `TopNav`.
+## Что НЕ меняется
+
+- Формула расчёта `readiness_percent` и вердикта.
+- Список этапов и весов.
+- Возможность ручного редактирования (остаётся как fallback).
+- Чек-лист (Стадия 1) и анализ записи (Стадия 3).
