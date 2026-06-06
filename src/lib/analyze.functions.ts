@@ -183,11 +183,11 @@ export const retryAnalysis = createServerFn({ method: "POST" })
         }
       }
 
-      const { data: pub } = admin.storage
+      const { data: signed, error: signErr } = await admin.storage
         .from("media")
-        .getPublicUrl(row.storage_path as string);
-      const publicUrl = pub.publicUrl;
-      if (!publicUrl) throw new Error("Не удалось получить ссылку на файл");
+        .createSignedUrl(row.storage_path as string, 60 * 60 * 24);
+      if (signErr || !signed?.signedUrl) throw signErr ?? new Error("Не удалось получить ссылку на файл");
+      const publicUrl = signed.signedUrl;
 
       const title = `lvb-${data.analysisId}`;
       const variables = { input: { url: publicUrl, title, webhook: WEBHOOK_URL } };
