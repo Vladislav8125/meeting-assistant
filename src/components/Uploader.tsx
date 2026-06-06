@@ -35,17 +35,22 @@ export function Uploader() {
     setBusy(true);
     try {
       setProgress("Загружаю файл…");
-      const path = `uploads/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Войдите в аккаунт");
+      const path = `${u.user.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const { error: upErr } = await supabase.storage
         .from("media")
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
 
-      const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+      // Bucket is private — issue a signed URL so Fireflies can fetch the file.
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("media")
+        .createSignedUrl(path, 60 * 60 * 24);
+      if (signErr || !signed?.signedUrl) throw signErr ?? new Error("Не удалось создать ссылку");
+      const pub = { publicUrl: signed.signedUrl };
 
       setProgress("Создаю запись…");
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Войдите в аккаунт");
       const { data: row, error: insErr } = await supabase
         .from("analyses")
         .insert({
