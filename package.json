@@ -53,6 +53,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
+    "mammoth": "^1.12.0",
     "nitro": "3.0.260429-beta",
     "pdfmake": "^0.3.9",
     "react": "^19.2.0",
