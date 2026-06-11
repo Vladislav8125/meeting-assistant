@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Save, Loader2, FileDown, Trash2, Sparkles, Upload, X, FileText } from "lucide-react";
+import { ArrowLeft, Save, Loader2, FileDown, Trash2, Sparkles, Upload, X, FileText, History } from "lucide-react";
 import { toast } from "sonner";
 import {
   MATRIX_STAGES,
@@ -9,9 +9,19 @@ import {
   summarizeMatrix,
   stageScorePct,
   isBlocking,
+  getStatusLabel,
 } from "@/lib/matrix-config";
 import { downloadMatrixPdf } from "@/lib/pdf-export";
 import { analyzeMatrix } from "@/lib/matrix-ai.functions";
+
+type LogEntry = {
+  ts: string;
+  source?: string;
+  level?: string;
+  message?: string;
+  user_email?: string;
+  data?: Record<string, unknown>;
+};
 
 export const Route = createFileRoute("/_authenticated/app/matrix/$id")({
   component: MatrixDetail,
