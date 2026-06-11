@@ -220,27 +220,25 @@ function MatrixDetail() {
       setRow((r) => {
         if (!r) return r;
         const nextStages = r.stages.map((s) => {
-              ...r,
-              stages: r.stages.map((s) => {
-                const ai = byKey.get(s.key);
-                if (!ai) return s;
-                const nextResponsible = s.responsible || ai.responsible || "";
-                const nextDue = s.due_date || ai.due_date || "";
-                if ((!s.responsible && ai.responsible) || (!s.due_date && ai.due_date)) suggested++;
-                return {
-                  ...s,
-                  status_index: ai.status_index,
-                  source: "ai" as const,
-                  confidence: ai.confidence,
-                  rationale: ai.rationale,
-                  comment: s.comment || ai.rationale || "",
-                  responsible: nextResponsible,
-                  due_date: nextDue,
-                };
-              }),
-            }
-          : r,
-      );
+          const ai = byKey.get(s.key);
+          if (!ai) return s;
+          const nextResponsible = s.responsible || ai.responsible || "";
+          const nextDue = s.due_date || ai.due_date || "";
+          if ((!s.responsible && ai.responsible) || (!s.due_date && ai.due_date)) suggested++;
+          return {
+            ...s,
+            status_index: ai.status_index,
+            source: "ai" as const,
+            confidence: ai.confidence,
+            rationale: ai.rationale,
+            comment: s.comment || ai.rationale || "",
+            responsible: nextResponsible,
+            due_date: nextDue,
+          };
+        });
+        baselineRef.current = JSON.parse(JSON.stringify(nextStages));
+        return { ...r, stages: nextStages };
+      });
       toast.success(
         `AI оценил ${res.stages.length} этапов${suggested ? `, предложил ${suggested} ответственных/сроков` : ""}. Проверьте и подтвердите.`,
       );
