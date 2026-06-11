@@ -166,6 +166,8 @@ export const analyzeMatrix = createServerFn({ method: "POST" })
             status_index: idx,
             confidence: s.confidence,
             rationale: s.rationale,
+            responsible: s.responsible.trim().slice(0, 200),
+            due_date: normalizeDate(s.due_date),
           };
         });
 
