@@ -492,6 +492,33 @@ function MatrixDetail() {
           </tbody>
         </table>
       </section>
+
+      {showLog && (
+        <section className="mt-6 rounded-2xl border border-border bg-card/60 p-5">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h3 className="font-display text-lg inline-flex items-center gap-2">
+              <History className="h-5 w-5" /> Журнал изменений
+            </h3>
+            <span className="text-xs text-muted-foreground">{row.logs.length} записей</span>
+          </div>
+          {row.logs.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Пока нет событий. Запустите AI-анализ или измените статус и сохраните.</div>
+          ) : (
+            <ol className="space-y-2 max-h-96 overflow-auto">
+              {[...row.logs].reverse().map((e, i) => (
+                <li key={i} className="rounded-lg border border-border bg-background/40 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+                    <span>{new Date(e.ts).toLocaleString("ru-RU")}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-muted">{(e.source ?? "user").toUpperCase()}</span>
+                    {e.user_email && <span>{e.user_email}</span>}
+                  </div>
+                  <div className="mt-1">{e.message ?? "—"}</div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
     </div>
   );
 }
