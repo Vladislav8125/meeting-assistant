@@ -217,9 +217,9 @@ function MatrixDetail() {
       }
       const byKey = new Map(res.stages.map((s) => [s.key, s] as const));
       let suggested = 0;
-      setRow((r) =>
-        r
-          ? {
+      setRow((r) => {
+        if (!r) return r;
+        const nextStages = r.stages.map((s) => {
               ...r,
               stages: r.stages.map((s) => {
                 const ai = byKey.get(s.key);
