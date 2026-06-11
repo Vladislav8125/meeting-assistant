@@ -85,8 +85,16 @@ const StageOut = z.object({
   status_index: z.number().int().min(0).max(5),
   confidence: z.number().min(0).max(1).optional().default(0.6),
   rationale: z.string().max(500).optional().default(""),
+  responsible: z.string().max(200).optional().default(""),
+  due_date: z.string().max(20).optional().default(""),
 });
 const AIOut = z.object({ stages: z.array(StageOut).min(1).max(20) });
+
+function normalizeDate(s: string): string {
+  const t = s.trim();
+  if (!t) return "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : "";
+}
 
 export const analyzeMatrix = createServerFn({ method: "POST" })
   .inputValidator((input) =>
