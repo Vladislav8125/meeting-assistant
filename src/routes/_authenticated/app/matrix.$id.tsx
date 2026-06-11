@@ -207,6 +207,7 @@ function MatrixDetail() {
           preparation_id: id,
           storage_paths: files.map((f) => f.path),
           free_text: freeText,
+          meeting_date: row.meeting_date ?? "",
         },
       });
       if (!res.ok) {
@@ -214,6 +215,7 @@ function MatrixDetail() {
         return;
       }
       const byKey = new Map(res.stages.map((s) => [s.key, s] as const));
+      let suggested = 0;
       setRow((r) =>
         r
           ? {
@@ -221,6 +223,9 @@ function MatrixDetail() {
               stages: r.stages.map((s) => {
                 const ai = byKey.get(s.key);
                 if (!ai) return s;
+                const nextResponsible = s.responsible || ai.responsible || "";
+                const nextDue = s.due_date || ai.due_date || "";
+                if ((!s.responsible && ai.responsible) || (!s.due_date && ai.due_date)) suggested++;
                 return {
                   ...s,
                   status_index: ai.status_index,
@@ -228,12 +233,16 @@ function MatrixDetail() {
                   confidence: ai.confidence,
                   rationale: ai.rationale,
                   comment: s.comment || ai.rationale || "",
+                  responsible: nextResponsible,
+                  due_date: nextDue,
                 };
               }),
             }
           : r,
       );
-      toast.success(`AI оценил ${res.stages.length} этапов. Проверьте и заполните ответственных.`);
+      toast.success(
+        `AI оценил ${res.stages.length} этапов${suggested ? `, предложил ${suggested} ответственных/сроков` : ""}. Проверьте и подтвердите.`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка анализа");
     } finally {
