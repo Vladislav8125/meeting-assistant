@@ -45,10 +45,14 @@ const SYS = `Ты — фасилитатор корпоративных сове
 Этапы и критерии:
 ${buildStagesSchema()}
 
+Дополнительно по каждому этапу постарайся вытащить из текста:
+- responsible: ФИО или роль ответственного, если явно упомянут в материалах. Пустая строка, если не указан — не придумывай.
+- due_date: дата дедлайна в формате YYYY-MM-DD. Если указана относительно даты совещания — посчитай абсолютную. Пустая строка, если не указана.
+
 Верни СТРОГО JSON без markdown:
 {
   "stages": [
-    { "key": "goal", "status_index": 0..3, "confidence": 0..1, "rationale": "1-2 предложения, на русском, чем обусловлен статус" },
+    { "key": "goal", "status_index": 0..3, "confidence": 0..1, "rationale": "1-2 предложения, на русском, чем обусловлен статус", "responsible": "ФИО или пусто", "due_date": "YYYY-MM-DD или пусто" },
     ... (ровно 10 объектов, по одному на каждый key из списка выше, в любом порядке)
   ]
 }`;
@@ -81,8 +85,16 @@ const StageOut = z.object({
   status_index: z.number().int().min(0).max(5),
   confidence: z.number().min(0).max(1).optional().default(0.6),
   rationale: z.string().max(500).optional().default(""),
+  responsible: z.string().max(200).optional().default(""),
+  due_date: z.string().max(20).optional().default(""),
 });
 const AIOut = z.object({ stages: z.array(StageOut).min(1).max(20) });
+
+function normalizeDate(s: string): string {
+  const t = s.trim();
+  if (!t) return "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : "";
+}
 
 export const analyzeMatrix = createServerFn({ method: "POST" })
   .inputValidator((input) =>
@@ -91,6 +103,7 @@ export const analyzeMatrix = createServerFn({ method: "POST" })
         preparation_id: z.string().uuid(),
         storage_paths: z.array(z.string().min(1).max(500)).max(10).default([]),
         free_text: z.string().max(30_000).optional().default(""),
+        meeting_date: z.string().max(20).optional().default(""),
       })
       .parse(input),
   )
@@ -101,6 +114,9 @@ export const analyzeMatrix = createServerFn({ method: "POST" })
 
     // Скачать и извлечь тексты
     const parts: string[] = [];
+    if (data.meeting_date) {
+      parts.push(`### Дата совещания: ${data.meeting_date}`);
+    }
     if (data.free_text.trim()) {
       parts.push(`### Свободный текст подготовки\n${data.free_text.trim()}`);
     }
@@ -154,6 +170,8 @@ export const analyzeMatrix = createServerFn({ method: "POST" })
             status_index: idx,
             confidence: s.confidence,
             rationale: s.rationale,
+            responsible: s.responsible.trim().slice(0, 200),
+            due_date: normalizeDate(s.due_date),
           };
         });
 

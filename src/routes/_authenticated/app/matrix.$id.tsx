@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Save, Loader2, FileDown, Trash2, Sparkles, Upload, X, FileText } from "lucide-react";
+import { ArrowLeft, Save, Loader2, FileDown, Trash2, Sparkles, Upload, X, FileText, History } from "lucide-react";
 import { toast } from "sonner";
 import {
   MATRIX_STAGES,
@@ -9,9 +9,19 @@ import {
   summarizeMatrix,
   stageScorePct,
   isBlocking,
+  getStatusLabel,
 } from "@/lib/matrix-config";
 import { downloadMatrixPdf } from "@/lib/pdf-export";
 import { analyzeMatrix } from "@/lib/matrix-ai.functions";
+
+type LogEntry = {
+  ts: string;
+  source?: string;
+  level?: string;
+  message?: string;
+  user_email?: string;
+  data?: Record<string, unknown>;
+};
 
 export const Route = createFileRoute("/_authenticated/app/matrix/$id")({
   component: MatrixDetail,
@@ -23,6 +33,7 @@ type Row = {
   meeting_date: string | null;
   moderator: string | null;
   stages: MatrixStage[];
+  logs: LogEntry[];
 };
 
 type UploadedFile = { path: string; name: string; size: number };
@@ -39,15 +50,23 @@ function MatrixDetail() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [showLog, setShowLog] = useState(false);
+  const baselineRef = useRef<MatrixStage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase
       .from("meeting_preparations")
-      .select("id,topic,meeting_date,moderator,stages")
+      .select("id,topic,meeting_date,moderator,stages,logs")
       .eq("id", id)
       .maybeSingle()
-      .then(({ data }) => setRow(data as Row | null));
+      .then(({ data }) => {
+        const r = data as Row | null;
+        if (r) {
+          baselineRef.current = JSON.parse(JSON.stringify(r.stages));
+          setRow({ ...r, logs: (r.logs ?? []) as LogEntry[] });
+        }
+      });
   }, [id]);
 
   const summary = useMemo(() => (row ? summarizeMatrix(row.stages) : null), [row]);
@@ -75,6 +94,36 @@ function MatrixDetail() {
   const save = async () => {
     setSaving(true);
     const sum = summarizeMatrix(row.stages);
+    const { data: u } = await supabase.auth.getUser();
+    const userEmail = u.user?.email ?? "unknown";
+
+    // Diff stages vs baseline → audit entries
+    const baseline = baselineRef.current;
+    const newEntries: LogEntry[] = [];
+    row.stages.forEach((s, idx) => {
+      const b = baseline[idx];
+      if (!b || b.key !== s.key) return;
+      const fromSrc = b.source ?? "manual";
+      const toSrc = s.source ?? "manual";
+      // Логируем только ручные правки пользователя (включая переопределение AI→MAN)
+      const isUserOverride = toSrc === "manual" && (b.status_index !== s.status_index || fromSrc === "ai");
+      if (!isUserOverride) return;
+      newEntries.push({
+        ts: new Date().toISOString(),
+        source: "user",
+        level: "info",
+        user_email: userEmail,
+        message: `«${s.title}»: ${fromSrc.toUpperCase()} «${getStatusLabel(s.key, b.status_index)}» → MAN «${getStatusLabel(s.key, s.status_index)}»`,
+        data: {
+          stage_key: s.key,
+          from_status: b.status_index,
+          to_status: s.status_index,
+          from_source: fromSrc,
+          to_source: toSrc,
+        },
+      });
+    });
+
     const { error } = await supabase
       .from("meeting_preparations")
       .update({
@@ -85,9 +134,18 @@ function MatrixDetail() {
         ...sum,
       })
       .eq("id", id);
+
+    if (!error) {
+      for (const entry of newEntries) {
+        await supabase.rpc("append_preparation_log", { _id: id, _entry: entry as never });
+      }
+      baselineRef.current = JSON.parse(JSON.stringify(row.stages));
+      setRow((r) => (r ? { ...r, logs: [...r.logs, ...newEntries] } : r));
+    }
+
     setSaving(false);
     if (error) toast.error(error.message);
-    else toast.success("Сохранено · " + sum.readiness_percent + "%");
+    else toast.success(`Сохранено · ${sum.readiness_percent}%${newEntries.length ? ` · ${newEntries.length} изм.` : ""}`);
   };
 
   const remove = async () => {
@@ -95,6 +153,7 @@ function MatrixDetail() {
     await supabase.from("meeting_preparations").delete().eq("id", id);
     window.location.href = "/app/matrix";
   };
+
 
   const handleFiles = async (picked: FileList | null) => {
     if (!picked || picked.length === 0) return;
@@ -149,6 +208,7 @@ function MatrixDetail() {
           preparation_id: id,
           storage_paths: files.map((f) => f.path),
           free_text: freeText,
+          meeting_date: row.meeting_date ?? "",
         },
       });
       if (!res.ok) {
@@ -156,26 +216,32 @@ function MatrixDetail() {
         return;
       }
       const byKey = new Map(res.stages.map((s) => [s.key, s] as const));
-      setRow((r) =>
-        r
-          ? {
-              ...r,
-              stages: r.stages.map((s) => {
-                const ai = byKey.get(s.key);
-                if (!ai) return s;
-                return {
-                  ...s,
-                  status_index: ai.status_index,
-                  source: "ai" as const,
-                  confidence: ai.confidence,
-                  rationale: ai.rationale,
-                  comment: s.comment || ai.rationale || "",
-                };
-              }),
-            }
-          : r,
+      let suggested = 0;
+      setRow((r) => {
+        if (!r) return r;
+        const nextStages = r.stages.map((s) => {
+          const ai = byKey.get(s.key);
+          if (!ai) return s;
+          const nextResponsible = s.responsible || ai.responsible || "";
+          const nextDue = s.due_date || ai.due_date || "";
+          if ((!s.responsible && ai.responsible) || (!s.due_date && ai.due_date)) suggested++;
+          return {
+            ...s,
+            status_index: ai.status_index,
+            source: "ai" as const,
+            confidence: ai.confidence,
+            rationale: ai.rationale,
+            comment: s.comment || ai.rationale || "",
+            responsible: nextResponsible,
+            due_date: nextDue,
+          };
+        });
+        baselineRef.current = JSON.parse(JSON.stringify(nextStages));
+        return { ...r, stages: nextStages };
+      });
+      toast.success(
+        `AI оценил ${res.stages.length} этапов${suggested ? `, предложил ${suggested} ответственных/сроков` : ""}. Проверьте и подтвердите.`,
       );
-      toast.success(`AI оценил ${res.stages.length} этапов. Проверьте и заполните ответственных.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка анализа");
     } finally {
@@ -245,6 +311,12 @@ function MatrixDetail() {
               <FileDown className="h-4 w-4" /> Скачать PDF
             </button>
             <button
+              onClick={() => setShowLog((v) => !v)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm"
+            >
+              <History className="h-4 w-4" /> Журнал ({row.logs.length})
+            </button>
+            <button
               onClick={remove}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 px-3 py-2 text-xs"
             >
@@ -262,8 +334,8 @@ function MatrixDetail() {
               <Sparkles className="h-5 w-5 text-brand" /> Автоматическая оценка по материалам
             </h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
-              Загрузите повестку, материалы или опишите подготовку текстом. AI сам проставит статусы по 10 этапам.
-              Ответственных и сроки заполните вручную — их нельзя надёжно вывести из документов.
+              Загрузите повестку, материалы или опишите подготовку текстом. AI проставит статусы по 10 этапам и
+              предложит ответственных и сроки, если найдёт их в материалах. Вам останется подтвердить или поправить.
             </p>
           </div>
           <button
@@ -419,6 +491,33 @@ function MatrixDetail() {
           </tbody>
         </table>
       </section>
+
+      {showLog && (
+        <section className="mt-6 rounded-2xl border border-border bg-card/60 p-5">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h3 className="font-display text-lg inline-flex items-center gap-2">
+              <History className="h-5 w-5" /> Журнал изменений
+            </h3>
+            <span className="text-xs text-muted-foreground">{row.logs.length} записей</span>
+          </div>
+          {row.logs.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Пока нет событий. Запустите AI-анализ или измените статус и сохраните.</div>
+          ) : (
+            <ol className="space-y-2 max-h-96 overflow-auto">
+              {[...row.logs].reverse().map((e, i) => (
+                <li key={i} className="rounded-lg border border-border bg-background/40 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+                    <span>{new Date(e.ts).toLocaleString("ru-RU")}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-muted">{(e.source ?? "user").toUpperCase()}</span>
+                    {e.user_email && <span>{e.user_email}</span>}
+                  </div>
+                  <div className="mt-1">{e.message ?? "—"}</div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
     </div>
   );
 }
