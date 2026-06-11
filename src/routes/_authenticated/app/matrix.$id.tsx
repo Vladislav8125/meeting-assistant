@@ -33,6 +33,7 @@ type Row = {
   meeting_date: string | null;
   moderator: string | null;
   stages: MatrixStage[];
+  logs: LogEntry[];
 };
 
 type UploadedFile = { path: string; name: string; size: number };
@@ -49,15 +50,23 @@ function MatrixDetail() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [showLog, setShowLog] = useState(false);
+  const baselineRef = useRef<MatrixStage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase
       .from("meeting_preparations")
-      .select("id,topic,meeting_date,moderator,stages")
+      .select("id,topic,meeting_date,moderator,stages,logs")
       .eq("id", id)
       .maybeSingle()
-      .then(({ data }) => setRow(data as Row | null));
+      .then(({ data }) => {
+        const r = data as Row | null;
+        if (r) {
+          baselineRef.current = JSON.parse(JSON.stringify(r.stages));
+          setRow({ ...r, logs: (r.logs ?? []) as LogEntry[] });
+        }
+      });
   }, [id]);
 
   const summary = useMemo(() => (row ? summarizeMatrix(row.stages) : null), [row]);
@@ -85,6 +94,35 @@ function MatrixDetail() {
   const save = async () => {
     setSaving(true);
     const sum = summarizeMatrix(row.stages);
+    const { data: u } = await supabase.auth.getUser();
+    const userEmail = u.user?.email ?? "unknown";
+
+    // Diff stages vs baseline → audit entries
+    const baseline = baselineRef.current;
+    const newEntries: LogEntry[] = [];
+    row.stages.forEach((s, idx) => {
+      const b = baseline[idx];
+      if (!b || b.key !== s.key) return;
+      const statusChanged = b.status_index !== s.status_index;
+      const sourceChanged = (b.source ?? "manual") !== (s.source ?? "manual");
+      if (statusChanged || sourceChanged) {
+        newEntries.push({
+          ts: new Date().toISOString(),
+          source: "user",
+          level: "info",
+          user_email: userEmail,
+          message: `Статус «${s.title}»: ${(b.source ?? "manual").toUpperCase()} «${getStatusLabel(s.key, b.status_index)}» → ${(s.source ?? "manual").toUpperCase()} «${getStatusLabel(s.key, s.status_index)}»`,
+          data: {
+            stage_key: s.key,
+            from_status: b.status_index,
+            to_status: s.status_index,
+            from_source: b.source ?? "manual",
+            to_source: s.source ?? "manual",
+          },
+        });
+      }
+    });
+
     const { error } = await supabase
       .from("meeting_preparations")
       .update({
@@ -95,9 +133,18 @@ function MatrixDetail() {
         ...sum,
       })
       .eq("id", id);
+
+    if (!error) {
+      for (const entry of newEntries) {
+        await supabase.rpc("append_preparation_log", { _id: id, _entry: entry as never });
+      }
+      baselineRef.current = JSON.parse(JSON.stringify(row.stages));
+      setRow((r) => (r ? { ...r, logs: [...r.logs, ...newEntries] } : r));
+    }
+
     setSaving(false);
     if (error) toast.error(error.message);
-    else toast.success("Сохранено · " + sum.readiness_percent + "%");
+    else toast.success(`Сохранено · ${sum.readiness_percent}%${newEntries.length ? ` · ${newEntries.length} изм.` : ""}`);
   };
 
   const remove = async () => {
@@ -105,6 +152,7 @@ function MatrixDetail() {
     await supabase.from("meeting_preparations").delete().eq("id", id);
     window.location.href = "/app/matrix";
   };
+
 
   const handleFiles = async (picked: FileList | null) => {
     if (!picked || picked.length === 0) return;
