@@ -312,6 +312,12 @@ function MatrixDetail() {
               <FileDown className="h-4 w-4" /> Скачать PDF
             </button>
             <button
+              onClick={() => setShowLog((v) => !v)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm"
+            >
+              <History className="h-4 w-4" /> Журнал ({row.logs.length})
+            </button>
+            <button
               onClick={remove}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 px-3 py-2 text-xs"
             >
