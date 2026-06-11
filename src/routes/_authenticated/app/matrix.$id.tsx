@@ -103,24 +103,25 @@ function MatrixDetail() {
     row.stages.forEach((s, idx) => {
       const b = baseline[idx];
       if (!b || b.key !== s.key) return;
-      const statusChanged = b.status_index !== s.status_index;
-      const sourceChanged = (b.source ?? "manual") !== (s.source ?? "manual");
-      if (statusChanged || sourceChanged) {
-        newEntries.push({
-          ts: new Date().toISOString(),
-          source: "user",
-          level: "info",
-          user_email: userEmail,
-          message: `Статус «${s.title}»: ${(b.source ?? "manual").toUpperCase()} «${getStatusLabel(s.key, b.status_index)}» → ${(s.source ?? "manual").toUpperCase()} «${getStatusLabel(s.key, s.status_index)}»`,
-          data: {
-            stage_key: s.key,
-            from_status: b.status_index,
-            to_status: s.status_index,
-            from_source: b.source ?? "manual",
-            to_source: s.source ?? "manual",
-          },
-        });
-      }
+      const fromSrc = b.source ?? "manual";
+      const toSrc = s.source ?? "manual";
+      // Логируем только ручные правки пользователя (включая переопределение AI→MAN)
+      const isUserOverride = toSrc === "manual" && (b.status_index !== s.status_index || fromSrc === "ai");
+      if (!isUserOverride) return;
+      newEntries.push({
+        ts: new Date().toISOString(),
+        source: "user",
+        level: "info",
+        user_email: userEmail,
+        message: `«${s.title}»: ${fromSrc.toUpperCase()} «${getStatusLabel(s.key, b.status_index)}» → MAN «${getStatusLabel(s.key, s.status_index)}»`,
+        data: {
+          stage_key: s.key,
+          from_status: b.status_index,
+          to_status: s.status_index,
+          from_source: fromSrc,
+          to_source: toSrc,
+        },
+      });
     });
 
     const { error } = await supabase
