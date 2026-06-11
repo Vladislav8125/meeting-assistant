@@ -103,6 +103,7 @@ export const analyzeMatrix = createServerFn({ method: "POST" })
         preparation_id: z.string().uuid(),
         storage_paths: z.array(z.string().min(1).max(500)).max(10).default([]),
         free_text: z.string().max(30_000).optional().default(""),
+        meeting_date: z.string().max(20).optional().default(""),
       })
       .parse(input),
   )
