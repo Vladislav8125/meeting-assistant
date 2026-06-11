@@ -114,6 +114,9 @@ export const analyzeMatrix = createServerFn({ method: "POST" })
 
     // Скачать и извлечь тексты
     const parts: string[] = [];
+    if (data.meeting_date) {
+      parts.push(`### Дата совещания: ${data.meeting_date}`);
+    }
     if (data.free_text.trim()) {
       parts.push(`### Свободный текст подготовки\n${data.free_text.trim()}`);
     }
