@@ -4,8 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAnalysis, detectLanguage } from "@/lib/analysis-logs.server";
 import { sendAnalysisReport } from "@/lib/email-report.server";
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const ANALYZE_MODEL = "google/gemini-2.5-flash";
+const AI_URL = "https://openrouter.ai/api/v1/chat/completions";
+const ANALYZE_MODEL = process.env.ANALYZE_MODEL || "google/gemini-2.5-flash";
 
 const CHUNK_PROMPT = `Ты — аналитик деловых совещаний. Тебе дан ФРАГМЕНТ транскрипта.
 Извлеки только то, что реально присутствует во фрагменте. Не выдумывай.
@@ -105,7 +105,7 @@ async function callAI(apiKey: string, messages: unknown[]): Promise<string> {
   if (!resp.ok) {
     const t = await resp.text();
     if (resp.status === 429) throw new Error("Rate limit ИИ. Попробуйте позже.");
-    if (resp.status === 402) throw new Error("Закончился баланс Lovable AI.");
+    if (resp.status === 402) throw new Error("Закончился баланс OpenRouter.");
     throw new Error(`AI gateway ${resp.status}: ${t.slice(0, 300)}`);
   }
   const ai = await resp.json();
@@ -125,8 +125,8 @@ export async function runAnalysisOnTranscript(params: {
   participantsHint?: string | null;
 }) {
   const { admin, analysisId, transcript } = params;
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+  const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+  if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
 
   const userMeta = [
     params.topic ? `Тема встречи: ${params.topic}` : null,
@@ -152,7 +152,7 @@ export async function runAnalysisOnTranscript(params: {
   const findings: ChunkFinding[] = await Promise.all(
     chunks.map(async (chunk, idx) => {
       try {
-        const content = await callAI(LOVABLE_API_KEY, [
+        const content = await callAI(OPENROUTER_API_KEY, [
           { role: "system", content: CHUNK_PROMPT },
           {
             role: "user",
@@ -194,7 +194,7 @@ export async function runAnalysisOnTranscript(params: {
         transcript.slice(-2000)
       : transcript;
 
-  const synthContent = await callAI(LOVABLE_API_KEY, [
+  const synthContent = await callAI(OPENROUTER_API_KEY, [
     { role: "system", content: SYNTH_PROMPT },
     {
       role: "user",

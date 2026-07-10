@@ -1,36 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runAnalysisOnTranscript } from "@/lib/analyze-pipeline.server";
 import { logAnalysis } from "@/lib/analysis-logs.server";
-
-const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
-
-async function fireflies<T>(
-  query: string,
-  variables: Record<string, unknown>,
-): Promise<T> {
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  const FIREFLIES_API_KEY = process.env.FIREFLIES_API_KEY;
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-  if (!FIREFLIES_API_KEY) throw new Error("FIREFLIES_API_KEY not configured");
-
-  const resp = await fetch(FIREFLIES_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": FIREFLIES_API_KEY,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const text = await resp.text();
-  if (!resp.ok)
-    throw new Error(`Fireflies ${resp.status}: ${text.slice(0, 400)}`);
-  const json: { data?: T; errors?: { message: string }[] } = JSON.parse(text);
-  if (json.errors?.length)
-    throw new Error("Fireflies: " + json.errors.map((e) => e.message).join("; "));
-  if (!json.data) throw new Error("Fireflies: пустой ответ");
-  return json.data;
-}
+import { ffQuery as fireflies } from "@/lib/fireflies.server";
 
 export const Route = createFileRoute("/api/public/fireflies-webhook")({
   server: {

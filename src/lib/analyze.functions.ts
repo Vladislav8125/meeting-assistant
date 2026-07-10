@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ffQuery as fireflies } from "@/lib/fireflies.server";
 
 async function logAnalysis(
   admin: SupabaseClient,
@@ -14,8 +15,6 @@ async function logAnalysis(
   return m.logAnalysis(admin, analysisId, source, level, message, data);
 }
 
-const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
-
 async function getAdmin() {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -27,45 +26,8 @@ async function getAdmin() {
   });
 }
 
-const PROJECT_ID = "e71eef0d-2665-4ba3-ac78-e7a2c5599aac";
-const WEBHOOK_URL = `https://project--${PROJECT_ID}.lovable.app/api/public/fireflies-webhook`;
-
-async function fireflies<T = unknown>(
-  query: string,
-  variables: Record<string, unknown>,
-): Promise<T> {
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  const FIREFLIES_API_KEY = process.env.FIREFLIES_API_KEY;
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-  if (!FIREFLIES_API_KEY) throw new Error("FIREFLIES_API_KEY not configured");
-
-  const resp = await fetch(FIREFLIES_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": FIREFLIES_API_KEY,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const text = await resp.text();
-  if (!resp.ok) {
-    throw new Error(`Fireflies ${resp.status}: ${text.slice(0, 400)}`);
-  }
-  let json: { data?: T; errors?: { message: string }[] };
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`Fireflies ответ не JSON: ${text.slice(0, 200)}`);
-  }
-  if (json.errors?.length) {
-    throw new Error(
-      "Fireflies: " + json.errors.map((e) => e.message).join("; "),
-    );
-  }
-  if (!json.data) throw new Error("Fireflies: пустой ответ");
-  return json.data;
-}
+const APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:3000";
+const WEBHOOK_URL = `${APP_URL}/api/public/fireflies-webhook`;
 
 export const analyzeRecording = createServerFn({ method: "POST" })
   .inputValidator((input) =>
@@ -221,7 +183,7 @@ export const retryAnalysis = createServerFn({ method: "POST" })
 
 export const kickPoll = createServerFn({ method: "POST" }).handler(async () => {
   try {
-    const url = `https://project--${PROJECT_ID}.lovable.app/api/public/poll-fireflies`;
+    const url = `${APP_URL}/api/public/poll-fireflies`;
     const r = await fetch(url, { method: "POST" });
     return { ok: r.ok, status: r.status };
   } catch (e) {

@@ -1,21 +1,18 @@
-// Server-only helpers for Fireflies GraphQL via Lovable connector gateway.
-const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
+// Server-only helpers for Fireflies GraphQL — direct API, no platform proxy.
+const FIREFLIES_URL = "https://api.fireflies.ai/graphql";
 
 export async function ffQuery<T>(
   query: string,
   variables: Record<string, unknown>,
 ): Promise<T> {
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
   const FIREFLIES_API_KEY = process.env.FIREFLIES_API_KEY;
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   if (!FIREFLIES_API_KEY) throw new Error("FIREFLIES_API_KEY not configured");
 
   const resp = await fetch(FIREFLIES_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": FIREFLIES_API_KEY,
+      Authorization: `Bearer ${FIREFLIES_API_KEY}`,
     },
     body: JSON.stringify({ query, variables }),
   });

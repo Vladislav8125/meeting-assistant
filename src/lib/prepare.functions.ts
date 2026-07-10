@@ -25,11 +25,11 @@ const SYS = `Ты — фасилитатор. Оцени готовность к
 }`;
 
 async function callAI(apiKey: string, userContent: string): Promise<string> {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: process.env.ANALYZE_MODEL || "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: SYS },
         { role: "user", content: userContent },
@@ -40,7 +40,7 @@ async function callAI(apiKey: string, userContent: string): Promise<string> {
   if (!resp.ok) {
     const t = await resp.text();
     if (resp.status === 429) throw new Error("Rate limit ИИ. Попробуйте позже.");
-    if (resp.status === 402) throw new Error("Закончился баланс Lovable AI.");
+    if (resp.status === 402) throw new Error("Закончился баланс OpenRouter.");
     throw new Error(`AI gateway ${resp.status}: ${t.slice(0, 300)}`);
   }
   const ai = await resp.json();
@@ -53,8 +53,8 @@ export const runReadinessCheck = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const admin = await getAdmin();
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
 
     const { data: prep, error } = await admin
       .from("meeting_preparations")
@@ -79,7 +79,7 @@ export const runReadinessCheck = createServerFn({ method: "POST" })
     ].join("\n");
 
     try {
-      const raw = await callAI(LOVABLE_API_KEY, userContent);
+      const raw = await callAI(OPENROUTER_API_KEY, userContent);
       let parsed: Record<string, unknown> = {};
       try {
         parsed = JSON.parse(raw);

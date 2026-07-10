@@ -1,6 +1,27 @@
-// Server-only: send the analysis report to recipients via Lovable Emails queue.
+// Server-only: send the analysis report to recipients via Resend.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAnalysis } from "@/lib/analysis-logs.server";
+
+const APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:3000";
+
+async function sendViaResend(to: string, subject: string, html: string): Promise<void> {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
+  const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+
+  const resp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to, subject, html }),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Resend ${resp.status}: ${text.slice(0, 400)}`);
+  }
+}
 
 type ActionItem = { task: string; owner?: string; deadline?: string };
 
@@ -99,8 +120,7 @@ export async function sendAnalysisReport(
     const report = (row.report ?? {}) as Report;
     if (!report || Object.keys(report).length === 0) throw new Error("Отчёт ещё не готов");
 
-    const PROJECT_ID = "e71eef0d-2665-4ba3-ac78-e7a2c5599aac";
-    const reportUrl = `https://project--${PROJECT_ID}.lovable.app/analysis/${analysisId}`;
+    const reportUrl = `${APP_URL}/analysis/${analysisId}`;
     const title = (row.topic as string | null) || (row.file_name as string);
     const subjectPrefix =
       format === "summary" ? "Резюме" : format === "actions" ? "Action items" : "Отчёт";
@@ -113,19 +133,12 @@ export async function sendAnalysisReport(
           : renderFull(report);
     const html = shell(body, title, reportUrl);
 
-    const enq = await admin.rpc("enqueue_email" as never, {
-      _queue: "transactional_emails",
-      _payload: {
-        to: recipientEmail,
-        subject,
-        html,
-        template_name: `analysis-${format}`,
-      },
-    } as never);
-    if (enq.error) {
-      const msg = enq.error.message || "email queue недоступен";
-      await logAnalysis(admin, analysisId, "email", "error", "enqueue_email failed", msg);
-      throw new Error("Email-инфраструктура не настроена. Настройте отправку писем.");
+    try {
+      await sendViaResend(recipientEmail, subject, html);
+    } catch (sendErr) {
+      const msg = sendErr instanceof Error ? sendErr.message : "email отправка недоступна";
+      await logAnalysis(admin, analysisId, "email", "error", "Resend send failed", msg);
+      throw new Error("Не удалось отправить письмо: " + msg);
     }
 
     if (format === "full") {
@@ -164,8 +177,7 @@ export async function sendActionItemsEmail(
       (a) => (a.owner ?? "").toLowerCase().includes(needle),
     );
 
-    const PROJECT_ID = "e71eef0d-2665-4ba3-ac78-e7a2c5599aac";
-    const reportUrl = `https://project--${PROJECT_ID}.lovable.app/analysis/${analysisId}`;
+    const reportUrl = `${APP_URL}/analysis/${analysisId}`;
     const title = (row.topic as string | null) || (row.file_name as string);
     const subject = `Ваши задачи по совещанию: ${title}`;
     const inner = `
@@ -173,17 +185,11 @@ export async function sendActionItemsEmail(
       ${mine.length ? actionsList(mine) : "<p style='color:#888'>Персональных задач не зафиксировано. Загляните в полный отчёт.</p>"}`;
     const html = shell(inner, title, reportUrl);
 
-    const enq = await admin.rpc("enqueue_email" as never, {
-      _queue: "transactional_emails",
-      _payload: {
-        to: recipientEmail,
-        subject,
-        html,
-        template_name: "action-items-personal",
-      },
-    } as never);
-    if (enq.error) {
-      throw new Error("Email-инфраструктура не настроена. Настройте отправку писем.");
+    try {
+      await sendViaResend(recipientEmail, subject, html);
+    } catch (sendErr) {
+      const msg = sendErr instanceof Error ? sendErr.message : "email отправка недоступна";
+      throw new Error("Не удалось отправить письмо: " + msg);
     }
     await logAnalysis(admin, analysisId, "email", "info", "Action items queued", {
       to: recipientEmail,
