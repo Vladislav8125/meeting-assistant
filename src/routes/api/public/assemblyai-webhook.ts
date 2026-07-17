@@ -53,6 +53,22 @@ export const Route = createFileRoute("/api/public/assemblyai-webhook")({
             return new Response("ok", { status: 200 });
           }
 
+          // AssemblyAI retries the webhook if it doesn't get a fast response —
+          // and our pipeline (OpenRouter chunking + synthesis) can easily take
+          // longer than its retry window. Claim the row atomically so a
+          // retried delivery for the same transcript doesn't start a second,
+          // concurrent analysis run.
+          const { data: claimed } = await admin
+            .from("analyses")
+            .update({ status: "analyzing" })
+            .eq("id", analysisId)
+            .eq("status", "transcribing")
+            .select("id");
+          if (!claimed || claimed.length === 0) {
+            await logAnalysis(admin, analysisId, "webhook", "info", "Duplicate webhook delivery ignored", { transcriptId });
+            return new Response("already processing", { status: 200 });
+          }
+
           const t = await getTranscript(transcriptId);
           const { transcript, participants, duration_estimate } = buildTranscriptText(t);
 

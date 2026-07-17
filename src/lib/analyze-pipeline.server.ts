@@ -124,6 +124,29 @@ export async function runAnalysisOnTranscript(params: {
   topic?: string | null;
   participantsHint?: string | null;
 }) {
+  try {
+    await runAnalysisOnTranscriptInner(params);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    console.error("runAnalysisOnTranscript failed", params.analysisId, e);
+    await logAnalysis(params.admin, params.analysisId, "pipeline", "error", "Analysis failed", msg);
+    await params.admin
+      .from("analyses")
+      .update({ status: "failed", error: msg })
+      .eq("id", params.analysisId);
+  }
+}
+
+async function runAnalysisOnTranscriptInner(params: {
+  admin: SupabaseClient;
+  analysisId: string;
+  transcript: string;
+  participants?: { label: string; role_guess?: string; talk_share_pct?: number }[];
+  duration_estimate?: string;
+  language?: string;
+  topic?: string | null;
+  participantsHint?: string | null;
+}) {
   const { admin, analysisId, transcript } = params;
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
   if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
@@ -194,7 +217,7 @@ export async function runAnalysisOnTranscript(params: {
         transcript.slice(-2000)
       : transcript;
 
-  const synthContent = await callAI(OPENROUTER_API_KEY, [
+  const synthMessages = [
     { role: "system", content: SYNTH_PROMPT },
     {
       role: "user",
@@ -204,9 +227,17 @@ export async function runAnalysisOnTranscript(params: {
         `=== ОБЗОР ТРАНСКРИПТА ===\n${overview}\n\n` +
         `=== НАХОДКИ ===\n${JSON.stringify(agg).slice(0, 60000)}`,
     },
-  ]);
+  ];
 
-  const synth = parseJsonLoose(synthContent) as Record<string, unknown>;
+  let synth: Record<string, unknown>;
+  try {
+    const synthContent = await callAI(OPENROUTER_API_KEY, synthMessages);
+    synth = parseJsonLoose(synthContent) as Record<string, unknown>;
+  } catch (e) {
+    await logAnalysis(admin, analysisId, "pipeline", "warn", "Synth parse failed, retrying once", e instanceof Error ? e.message : "unknown");
+    const retryContent = await callAI(OPENROUTER_API_KEY, synthMessages);
+    synth = parseJsonLoose(retryContent) as Record<string, unknown>;
+  }
 
   const report = {
     language: detectedLang || params.language,
