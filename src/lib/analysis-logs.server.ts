@@ -5,7 +5,7 @@ export type LogLevel = "info" | "warn" | "error";
 
 export type LogEntry = {
   ts: string;
-  source: string; // e.g. "fireflies", "webhook", "pipeline"
+  source: string; // e.g. "assemblyai", "webhook", "pipeline"
   level: LogLevel;
   message: string;
   data?: unknown;

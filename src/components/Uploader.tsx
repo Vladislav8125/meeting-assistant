@@ -43,7 +43,7 @@ export function Uploader() {
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
 
-      // Bucket is private — issue a signed URL so Fireflies can fetch the file.
+      // Bucket is private — issue a signed URL so AssemblyAI can fetch the file.
       const { data: signed, error: signErr } = await supabase.storage
         .from("media")
         .createSignedUrl(path, 60 * 60 * 24);
@@ -68,7 +68,7 @@ export function Uploader() {
         .single();
       if (insErr || !row) throw insErr ?? new Error("insert failed");
 
-      setProgress("Отправляю в Fireflies на транскрибацию…");
+      setProgress("Отправляю на транскрибацию…");
       try {
         await analyzeRecording({
           data: {
@@ -192,7 +192,7 @@ export function Uploader() {
         </Link>
       )}
       <p className="text-[11px] text-muted-foreground mt-3 text-center">
-        Транскрибация и анализ выполняются на сервере через Lovable AI. Файл
+        Транскрибация — через AssemblyAI, анализ — через OpenRouter. Файл
         будет доступен только по ссылке отчёта.
       </p>
     </div>

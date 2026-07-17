@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ffQuery as fireflies } from "@/lib/fireflies.server";
+import { submitTranscript, getTranscript, buildTranscriptText } from "@/lib/assemblyai.server";
 
 async function logAnalysis(
   admin: SupabaseClient,
@@ -27,7 +27,7 @@ async function getAdmin() {
 }
 
 const APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:3000";
-const WEBHOOK_URL = `${APP_URL}/api/public/fireflies-webhook`;
+const WEBHOOK_URL = `${APP_URL}/api/public/assemblyai-webhook`;
 
 export const analyzeRecording = createServerFn({ method: "POST" })
   .inputValidator((input) =>
@@ -46,42 +46,26 @@ export const analyzeRecording = createServerFn({ method: "POST" })
     const admin = await getAdmin();
 
     try {
-      const title = `lvb-${data.analysisId}`;
-      const variables = {
-        input: { url: data.publicUrl, title, webhook: WEBHOOK_URL },
-      };
-      await logAnalysis(admin, data.analysisId, "fireflies", "info", "uploadAudio request", variables);
+      await logAnalysis(admin, data.analysisId, "assemblyai", "info", "submitTranscript request", {
+        audioUrl: data.publicUrl,
+        webhookUrl: WEBHOOK_URL,
+      });
 
-      const mutation = `
-        mutation($input: AudioUploadInput!) {
-          uploadAudio(input: $input) {
-            success
-            title
-            message
-          }
-        }
-      `;
+      const result = await submitTranscript({
+        audioUrl: data.publicUrl,
+        webhookUrl: WEBHOOK_URL,
+      });
 
-      const result = await fireflies<{
-        uploadAudio: { success: boolean; title?: string; message?: string };
-      }>(mutation, variables);
-
-      await logAnalysis(admin, data.analysisId, "fireflies", "info", "uploadAudio response", result);
-
-      if (!result.uploadAudio?.success) {
-        throw new Error(
-          "Fireflies отклонил загрузку: " +
-            (result.uploadAudio?.message ?? "неизвестная причина"),
-        );
-      }
+      await logAnalysis(admin, data.analysisId, "assemblyai", "info", "submitTranscript response", result);
 
       await admin
         .from("analyses")
         .update({
           status: "transcribing",
           error: null,
-          language: "ru", // expected by default; refined post-transcription
+          language: "ru",
           recipient_email: data.recipientEmail ?? null,
+          provider_transcript_id: result.id,
         })
         .eq("id", data.analysisId);
 
@@ -89,7 +73,7 @@ export const analyzeRecording = createServerFn({ method: "POST" })
     } catch (e) {
       const message = e instanceof Error ? e.message : "Unknown error";
       console.error("analyzeRecording failed:", message);
-      await logAnalysis(admin, data.analysisId, "fireflies", "error", "uploadAudio failed", message);
+      await logAnalysis(admin, data.analysisId, "assemblyai", "error", "submitTranscript failed", message);
       await admin
         .from("analyses")
         .update({ status: "failed", error: message })
@@ -107,7 +91,7 @@ export const retryAnalysis = createServerFn({ method: "POST" })
     try {
       const { data: row, error } = await admin
         .from("analyses")
-        .select("id, storage_path, mime_type, topic, participants, recipient_email")
+        .select("id, storage_path, mime_type, topic, participants, recipient_email, provider_transcript_id")
         .eq("id", data.analysisId)
         .single();
       if (error || !row) throw new Error("Запись не найдена");
@@ -119,29 +103,29 @@ export const retryAnalysis = createServerFn({ method: "POST" })
 
       await logAnalysis(admin, data.analysisId, "pipeline", "info", "Retry requested");
 
-      const { findTranscriptByTitle, buildTranscriptText } = await import(
-        "@/lib/fireflies.server"
-      );
-      const { runAnalysisOnTranscript } = await import(
-        "@/lib/analyze-pipeline.server"
-      );
-      const existing = await findTranscriptByTitle(`lvb-${data.analysisId}`);
-      if (existing) {
-        await logAnalysis(admin, data.analysisId, "fireflies", "info", "Existing transcript found", { id: existing.id, title: existing.title, duration: existing.duration });
-        const { transcript, participants, duration_estimate } =
-          buildTranscriptText(existing);
-        if (transcript.trim()) {
-          await runAnalysisOnTranscript({
-            admin,
-            analysisId: data.analysisId,
-            transcript,
-            participants,
-            duration_estimate,
-            language: "ru",
-            topic: (row.topic as string | null) ?? null,
-            participantsHint: (row.participants as string | null) ?? null,
+      const existingId = row.provider_transcript_id as string | null;
+      if (existingId) {
+        const existing = await getTranscript(existingId);
+        if (existing.status === "completed") {
+          await logAnalysis(admin, data.analysisId, "assemblyai", "info", "Existing transcript found", {
+            id: existing.id,
+            duration: existing.audio_duration,
           });
-          return { ok: true, mode: "from-existing-transcript" as const };
+          const { transcript, participants, duration_estimate } = buildTranscriptText(existing);
+          if (transcript.trim()) {
+            const { runAnalysisOnTranscript } = await import("@/lib/analyze-pipeline.server");
+            await runAnalysisOnTranscript({
+              admin,
+              analysisId: data.analysisId,
+              transcript,
+              participants,
+              duration_estimate,
+              language: "ru",
+              topic: (row.topic as string | null) ?? null,
+              participantsHint: (row.participants as string | null) ?? null,
+            });
+            return { ok: true, mode: "from-existing-transcript" as const };
+          }
         }
       }
 
@@ -149,26 +133,19 @@ export const retryAnalysis = createServerFn({ method: "POST" })
         .from("media")
         .createSignedUrl(row.storage_path as string, 60 * 60 * 24);
       if (signErr || !signed?.signedUrl) throw signErr ?? new Error("Не удалось получить ссылку на файл");
-      const publicUrl = signed.signedUrl;
 
-      const title = `lvb-${data.analysisId}`;
-      const variables = { input: { url: publicUrl, title, webhook: WEBHOOK_URL } };
-      await logAnalysis(admin, data.analysisId, "fireflies", "info", "Re-uploadAudio request", variables);
-      const result = await fireflies<{
-        uploadAudio: { success: boolean; message?: string };
-      }>(
-        `mutation($input: AudioUploadInput!) {
-          uploadAudio(input: $input) { success title message }
-        }`,
-        variables,
-      );
-      await logAnalysis(admin, data.analysisId, "fireflies", "info", "Re-uploadAudio response", result);
-      if (!result.uploadAudio?.success) {
-        throw new Error(
-          "Fireflies отклонил загрузку: " +
-            (result.uploadAudio?.message ?? "неизвестная причина"),
-        );
-      }
+      await logAnalysis(admin, data.analysisId, "assemblyai", "info", "Re-submitting to AssemblyAI");
+      const result = await submitTranscript({
+        audioUrl: signed.signedUrl,
+        webhookUrl: WEBHOOK_URL,
+      });
+      await logAnalysis(admin, data.analysisId, "assemblyai", "info", "Re-submit response", result);
+
+      await admin
+        .from("analyses")
+        .update({ provider_transcript_id: result.id })
+        .eq("id", data.analysisId);
+
       return { ok: true, mode: "reuploaded" as const };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown";
@@ -183,7 +160,7 @@ export const retryAnalysis = createServerFn({ method: "POST" })
 
 export const kickPoll = createServerFn({ method: "POST" }).handler(async () => {
   try {
-    const url = `${APP_URL}/api/public/poll-fireflies`;
+    const url = `${APP_URL}/api/public/poll-assemblyai`;
     const r = await fetch(url, { method: "POST" });
     return { ok: r.ok, status: r.status };
   } catch (e) {

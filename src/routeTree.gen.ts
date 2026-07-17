@@ -20,8 +20,8 @@ import { Route as DistributeIdRouteImport } from './routes/distribute.$id'
 import { Route as AnalysisIdRouteImport } from './routes/analysis.$id'
 import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticated/app/route'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
-import { Route as ApiPublicPollFirefliesRouteImport } from './routes/api/public/poll-fireflies'
-import { Route as ApiPublicFirefliesWebhookRouteImport } from './routes/api/public/fireflies-webhook'
+import { Route as ApiPublicPollAssemblyaiRouteImport } from './routes/api/public/poll-assemblyai'
+import { Route as ApiPublicAssemblyaiWebhookRouteImport } from './routes/api/public/assemblyai-webhook'
 import { Route as AuthenticatedAppMeetingRouteImport } from './routes/_authenticated/app/meeting'
 import { Route as AuthenticatedAppMatrixRouteImport } from './routes/_authenticated/app/matrix'
 import { Route as AuthenticatedAppJournalRouteImport } from './routes/_authenticated/app/journal'
@@ -84,15 +84,15 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAppRouteRoute,
 } as any)
-const ApiPublicPollFirefliesRoute = ApiPublicPollFirefliesRouteImport.update({
-  id: '/api/public/poll-fireflies',
-  path: '/api/public/poll-fireflies',
+const ApiPublicPollAssemblyaiRoute = ApiPublicPollAssemblyaiRouteImport.update({
+  id: '/api/public/poll-assemblyai',
+  path: '/api/public/poll-assemblyai',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicFirefliesWebhookRoute =
-  ApiPublicFirefliesWebhookRouteImport.update({
-    id: '/api/public/fireflies-webhook',
-    path: '/api/public/fireflies-webhook',
+const ApiPublicAssemblyaiWebhookRoute =
+  ApiPublicAssemblyaiWebhookRouteImport.update({
+    id: '/api/public/assemblyai-webhook',
+    path: '/api/public/assemblyai-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedAppMeetingRoute = AuthenticatedAppMeetingRouteImport.update({
@@ -149,8 +149,8 @@ export interface FileRoutesByFullPath {
   '/app/journal': typeof AuthenticatedAppJournalRoute
   '/app/matrix': typeof AuthenticatedAppMatrixRouteWithChildren
   '/app/meeting': typeof AuthenticatedAppMeetingRouteWithChildren
-  '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
-  '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
+  '/api/public/assemblyai-webhook': typeof ApiPublicAssemblyaiWebhookRoute
+  '/api/public/poll-assemblyai': typeof ApiPublicPollAssemblyaiRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
@@ -169,8 +169,8 @@ export interface FileRoutesByTo {
   '/app/journal': typeof AuthenticatedAppJournalRoute
   '/app/matrix': typeof AuthenticatedAppMatrixRouteWithChildren
   '/app/meeting': typeof AuthenticatedAppMeetingRouteWithChildren
-  '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
-  '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
+  '/api/public/assemblyai-webhook': typeof ApiPublicAssemblyaiWebhookRoute
+  '/api/public/poll-assemblyai': typeof ApiPublicPollAssemblyaiRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
@@ -192,8 +192,8 @@ export interface FileRoutesById {
   '/_authenticated/app/journal': typeof AuthenticatedAppJournalRoute
   '/_authenticated/app/matrix': typeof AuthenticatedAppMatrixRouteWithChildren
   '/_authenticated/app/meeting': typeof AuthenticatedAppMeetingRouteWithChildren
-  '/api/public/fireflies-webhook': typeof ApiPublicFirefliesWebhookRoute
-  '/api/public/poll-fireflies': typeof ApiPublicPollFirefliesRoute
+  '/api/public/assemblyai-webhook': typeof ApiPublicAssemblyaiWebhookRoute
+  '/api/public/poll-assemblyai': typeof ApiPublicPollAssemblyaiRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/_authenticated/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
@@ -215,8 +215,8 @@ export interface FileRouteTypes {
     | '/app/journal'
     | '/app/matrix'
     | '/app/meeting'
-    | '/api/public/fireflies-webhook'
-    | '/api/public/poll-fireflies'
+    | '/api/public/assemblyai-webhook'
+    | '/api/public/poll-assemblyai'
     | '/app/'
     | '/app/checklist/$id'
     | '/app/matrix/$id'
@@ -235,8 +235,8 @@ export interface FileRouteTypes {
     | '/app/journal'
     | '/app/matrix'
     | '/app/meeting'
-    | '/api/public/fireflies-webhook'
-    | '/api/public/poll-fireflies'
+    | '/api/public/assemblyai-webhook'
+    | '/api/public/poll-assemblyai'
     | '/app'
     | '/app/checklist/$id'
     | '/app/matrix/$id'
@@ -257,8 +257,8 @@ export interface FileRouteTypes {
     | '/_authenticated/app/journal'
     | '/_authenticated/app/matrix'
     | '/_authenticated/app/meeting'
-    | '/api/public/fireflies-webhook'
-    | '/api/public/poll-fireflies'
+    | '/api/public/assemblyai-webhook'
+    | '/api/public/poll-assemblyai'
     | '/_authenticated/app/'
     | '/_authenticated/app/checklist/$id'
     | '/_authenticated/app/matrix/$id'
@@ -273,8 +273,8 @@ export interface RootRouteChildren {
   MeetingRoute: typeof MeetingRoute
   PrepareRoute: typeof PrepareRouteWithChildren
   AnalysisIdRoute: typeof AnalysisIdRoute
-  ApiPublicFirefliesWebhookRoute: typeof ApiPublicFirefliesWebhookRoute
-  ApiPublicPollFirefliesRoute: typeof ApiPublicPollFirefliesRoute
+  ApiPublicAssemblyaiWebhookRoute: typeof ApiPublicAssemblyaiWebhookRoute
+  ApiPublicPollAssemblyaiRoute: typeof ApiPublicPollAssemblyaiRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -356,18 +356,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/api/public/poll-fireflies': {
-      id: '/api/public/poll-fireflies'
-      path: '/api/public/poll-fireflies'
-      fullPath: '/api/public/poll-fireflies'
-      preLoaderRoute: typeof ApiPublicPollFirefliesRouteImport
+    '/api/public/poll-assemblyai': {
+      id: '/api/public/poll-assemblyai'
+      path: '/api/public/poll-assemblyai'
+      fullPath: '/api/public/poll-assemblyai'
+      preLoaderRoute: typeof ApiPublicPollAssemblyaiRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/fireflies-webhook': {
-      id: '/api/public/fireflies-webhook'
-      path: '/api/public/fireflies-webhook'
-      fullPath: '/api/public/fireflies-webhook'
-      preLoaderRoute: typeof ApiPublicFirefliesWebhookRouteImport
+    '/api/public/assemblyai-webhook': {
+      id: '/api/public/assemblyai-webhook'
+      path: '/api/public/assemblyai-webhook'
+      fullPath: '/api/public/assemblyai-webhook'
+      preLoaderRoute: typeof ApiPublicAssemblyaiWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/meeting': {
@@ -527,8 +527,8 @@ const rootRouteChildren: RootRouteChildren = {
   MeetingRoute: MeetingRoute,
   PrepareRoute: PrepareRouteWithChildren,
   AnalysisIdRoute: AnalysisIdRoute,
-  ApiPublicFirefliesWebhookRoute: ApiPublicFirefliesWebhookRoute,
-  ApiPublicPollFirefliesRoute: ApiPublicPollFirefliesRoute,
+  ApiPublicAssemblyaiWebhookRoute: ApiPublicAssemblyaiWebhookRoute,
+  ApiPublicPollAssemblyaiRoute: ApiPublicPollAssemblyaiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
