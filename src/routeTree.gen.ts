@@ -27,6 +27,8 @@ import { Route as AuthenticatedAppMatrixRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppJournalRouteImport } from './routes/_authenticated/app/journal'
 import { Route as AuthenticatedAppChecklistRouteImport } from './routes/_authenticated/app/checklist'
 import { Route as AuthenticatedAppMeetingIndexRouteImport } from './routes/_authenticated/app/meeting.index'
+import { Route as AuthenticatedAppMatrixIndexRouteImport } from './routes/_authenticated/app/matrix.index'
+import { Route as AuthenticatedAppChecklistIndexRouteImport } from './routes/_authenticated/app/checklist.index'
 import { Route as AuthenticatedAppMeetingIdRouteImport } from './routes/_authenticated/app/meeting.$id'
 import { Route as AuthenticatedAppMatrixIdRouteImport } from './routes/_authenticated/app/matrix.$id'
 import { Route as AuthenticatedAppChecklistIdRouteImport } from './routes/_authenticated/app/checklist.$id'
@@ -123,6 +125,18 @@ const AuthenticatedAppMeetingIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAppMeetingRoute,
   } as any)
+const AuthenticatedAppMatrixIndexRoute =
+  AuthenticatedAppMatrixIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppMatrixRoute,
+  } as any)
+const AuthenticatedAppChecklistIndexRoute =
+  AuthenticatedAppChecklistIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppChecklistRoute,
+  } as any)
 const AuthenticatedAppMeetingIdRoute =
   AuthenticatedAppMeetingIdRouteImport.update({
     id: '/$id',
@@ -162,6 +176,8 @@ export interface FileRoutesByFullPath {
   '/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
   '/app/meeting/$id': typeof AuthenticatedAppMeetingIdRoute
+  '/app/checklist/': typeof AuthenticatedAppChecklistIndexRoute
+  '/app/matrix/': typeof AuthenticatedAppMatrixIndexRoute
   '/app/meeting/': typeof AuthenticatedAppMeetingIndexRoute
 }
 export interface FileRoutesByTo {
@@ -173,15 +189,15 @@ export interface FileRoutesByTo {
   '/analysis/$id': typeof AnalysisIdRoute
   '/distribute/$id': typeof DistributeIdRoute
   '/prepare/$id': typeof PrepareIdRoute
-  '/app/checklist': typeof AuthenticatedAppChecklistRouteWithChildren
   '/app/journal': typeof AuthenticatedAppJournalRoute
-  '/app/matrix': typeof AuthenticatedAppMatrixRouteWithChildren
   '/api/public/assemblyai-webhook': typeof ApiPublicAssemblyaiWebhookRoute
   '/api/public/poll-assemblyai': typeof ApiPublicPollAssemblyaiRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
   '/app/meeting/$id': typeof AuthenticatedAppMeetingIdRoute
+  '/app/checklist': typeof AuthenticatedAppChecklistIndexRoute
+  '/app/matrix': typeof AuthenticatedAppMatrixIndexRoute
   '/app/meeting': typeof AuthenticatedAppMeetingIndexRoute
 }
 export interface FileRoutesById {
@@ -206,6 +222,8 @@ export interface FileRoutesById {
   '/_authenticated/app/checklist/$id': typeof AuthenticatedAppChecklistIdRoute
   '/_authenticated/app/matrix/$id': typeof AuthenticatedAppMatrixIdRoute
   '/_authenticated/app/meeting/$id': typeof AuthenticatedAppMeetingIdRoute
+  '/_authenticated/app/checklist/': typeof AuthenticatedAppChecklistIndexRoute
+  '/_authenticated/app/matrix/': typeof AuthenticatedAppMatrixIndexRoute
   '/_authenticated/app/meeting/': typeof AuthenticatedAppMeetingIndexRoute
 }
 export interface FileRouteTypes {
@@ -230,6 +248,8 @@ export interface FileRouteTypes {
     | '/app/checklist/$id'
     | '/app/matrix/$id'
     | '/app/meeting/$id'
+    | '/app/checklist/'
+    | '/app/matrix/'
     | '/app/meeting/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -241,15 +261,15 @@ export interface FileRouteTypes {
     | '/analysis/$id'
     | '/distribute/$id'
     | '/prepare/$id'
-    | '/app/checklist'
     | '/app/journal'
-    | '/app/matrix'
     | '/api/public/assemblyai-webhook'
     | '/api/public/poll-assemblyai'
     | '/app'
     | '/app/checklist/$id'
     | '/app/matrix/$id'
     | '/app/meeting/$id'
+    | '/app/checklist'
+    | '/app/matrix'
     | '/app/meeting'
   id:
     | '__root__'
@@ -273,6 +293,8 @@ export interface FileRouteTypes {
     | '/_authenticated/app/checklist/$id'
     | '/_authenticated/app/matrix/$id'
     | '/_authenticated/app/meeting/$id'
+    | '/_authenticated/app/checklist/'
+    | '/_authenticated/app/matrix/'
     | '/_authenticated/app/meeting/'
   fileRoutesById: FileRoutesById
 }
@@ -416,6 +438,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppMeetingIndexRouteImport
       parentRoute: typeof AuthenticatedAppMeetingRoute
     }
+    '/_authenticated/app/matrix/': {
+      id: '/_authenticated/app/matrix/'
+      path: '/'
+      fullPath: '/app/matrix/'
+      preLoaderRoute: typeof AuthenticatedAppMatrixIndexRouteImport
+      parentRoute: typeof AuthenticatedAppMatrixRoute
+    }
+    '/_authenticated/app/checklist/': {
+      id: '/_authenticated/app/checklist/'
+      path: '/'
+      fullPath: '/app/checklist/'
+      preLoaderRoute: typeof AuthenticatedAppChecklistIndexRouteImport
+      parentRoute: typeof AuthenticatedAppChecklistRoute
+    }
     '/_authenticated/app/meeting/$id': {
       id: '/_authenticated/app/meeting/$id'
       path: '/$id'
@@ -442,11 +478,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAppChecklistRouteChildren {
   AuthenticatedAppChecklistIdRoute: typeof AuthenticatedAppChecklistIdRoute
+  AuthenticatedAppChecklistIndexRoute: typeof AuthenticatedAppChecklistIndexRoute
 }
 
 const AuthenticatedAppChecklistRouteChildren: AuthenticatedAppChecklistRouteChildren =
   {
     AuthenticatedAppChecklistIdRoute: AuthenticatedAppChecklistIdRoute,
+    AuthenticatedAppChecklistIndexRoute: AuthenticatedAppChecklistIndexRoute,
   }
 
 const AuthenticatedAppChecklistRouteWithChildren =
@@ -456,11 +494,13 @@ const AuthenticatedAppChecklistRouteWithChildren =
 
 interface AuthenticatedAppMatrixRouteChildren {
   AuthenticatedAppMatrixIdRoute: typeof AuthenticatedAppMatrixIdRoute
+  AuthenticatedAppMatrixIndexRoute: typeof AuthenticatedAppMatrixIndexRoute
 }
 
 const AuthenticatedAppMatrixRouteChildren: AuthenticatedAppMatrixRouteChildren =
   {
     AuthenticatedAppMatrixIdRoute: AuthenticatedAppMatrixIdRoute,
+    AuthenticatedAppMatrixIndexRoute: AuthenticatedAppMatrixIndexRoute,
   }
 
 const AuthenticatedAppMatrixRouteWithChildren =
